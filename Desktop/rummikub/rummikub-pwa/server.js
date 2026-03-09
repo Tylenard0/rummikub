@@ -128,6 +128,7 @@ function createRoom(roomId) {
     currentPlayerIndex: 0, turnSnapshot: null,
     log: [], winner: null, winnerScores: null,
     rules: { ...DEFAULT_RULES },
+    palette: 'classic',
     createdAt: Date.now(),
   };
 }
@@ -245,7 +246,7 @@ function safeState(room, forPlayerId) {
     board: room.board, pool: room.pool.length,
     currentPlayerIndex: room.currentPlayerIndex,
     winner: room.winner, winnerScores: room.winnerScores,
-    log: room.log.slice(-30), rules: room.rules,
+    log: room.log.slice(-30), rules: room.rules, palette: room.palette,
     players: room.players.map(p => ({
       id: p.id, name: p.name,
       avatarColor: p.avatarColor || AVATAR_COLORS[0],
@@ -333,6 +334,60 @@ io.on('connection', (socket) => {
     const player = room.players.find(p => p.id === socket.id);
     if (!player) return;
     room.log.push(`💬 ${player.name}: ${msg.trim().slice(0, 100)}`);
+    broadcastState(room);
+  });
+
+
+  socket.on('set_palette', ({ palette }, cb) => {
+    const room = rooms[currentRoom];
+    if (!room) return cb?.({ error: 'Room not found' });
+    if (room.players[0]?.id !== socket.id) return cb?.({ error: 'Only host can change palette' });
+    const valid = ['classic','tropical','icecream','neon'];
+    if (!valid.includes(palette)) return cb?.({ error: 'Invalid palette' });
+    room.palette = palette;
+    cb?.({ ok: true });
+    broadcastState(room);
+  });
+
+  socket.on('quit_game', (_, cb) => {
+    const room = rooms[currentRoom];
+    if (!room) return cb?.({ error: 'Room not found' });
+    const idx = room.players.findIndex(p => p.id === socket.id);
+    if (idx === -1) return cb?.({ error: 'Player not found' });
+    const player = room.players[idx];
+
+    if (room.phase === 'playing') {
+      // Return tiles to pool and shuffle
+      room.pool.push(...player.rack);
+      for (let i = room.pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [room.pool[i], room.pool[j]] = [room.pool[j], room.pool[i]];
+      }
+      room.log.push(`${player.name} left the game. Their tiles returned to the pool.`);
+
+      // If it was their turn, advance
+      const wasTheirTurn = room.players[room.currentPlayerIndex]?.id === socket.id;
+      room.players.splice(idx, 1);
+
+      if (room.players.length < 2) {
+        // Not enough players — end game
+        room.phase = 'ended';
+        room.winner = room.players[0]?.name || 'Nobody';
+        room.log.push(`Not enough players. Game over!`);
+      } else {
+        if (wasTheirTurn) {
+          room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
+          advanceTurn(room);
+        } else if (idx < room.currentPlayerIndex) {
+          room.currentPlayerIndex--;
+        }
+      }
+    } else {
+      room.players.splice(idx, 1);
+    }
+
+    socket.leave(currentRoom);
+    cb?.({ ok: true });
     broadcastState(room);
   });
 
