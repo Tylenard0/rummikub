@@ -11,6 +11,12 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>Parsons Family Rummikub</title>
 <script src="/socket.io/socket.io.js"></script>
+<script>
+// If socket.io failed to load from server, fall back to CDN
+if (typeof io === 'undefined') {
+  document.write('<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"><\/script>');
+}
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Sans:wght@300;400;500;700&display=swap');
 
@@ -1003,6 +1009,40 @@ function applyPalette(id) {
 }
 
 // Build palette grid
+f
+
+// ─── Settings overlay ─────────────────────────────────────────────────────────
+function toggleSettings() {
+  const ov = document.getElementById('settings-overlay');
+  if (!ov) return;
+  const isOpen = ov.classList.contains('open');
+  if (!isOpen) {
+    buildPaletteGrid();
+    document.querySelectorAll('.size-pill').forEach(p => p.classList.toggle('active', p.dataset.size === currentSize));
+    document.querySelectorAll('.felt-pill').forEach(p => p.classList.toggle('active', p.dataset.felt === currentFelt));
+  }
+  ov.classList.toggle('open');
+}
+function settingsOutside(e) {
+  if (e.target === document.getElementById('settings-overlay')) toggleSettings();
+}
+
+// ─── Quit ─────────────────────────────────────────────────────────────────────
+function confirmQuit() {
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+function doQuit() {
+  closeConfirm();
+  toggleSettings();
+  socket.emit('quit_game', {}, r => {
+    if (r?.error) toast(r.error, 'err');
+    else location.reload();
+  });
+}
+
 function buildPaletteGrid() {
   const grid = document.getElementById('palette-grid');
   if (!grid) return;
@@ -1762,7 +1802,7 @@ document.addEventListener('DOMContentLoaded', () => {
   z-index:1;
   font-family:'DM Sans',sans-serif;
 ">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.4
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.5
 </div>
 </body>
 </html>
