@@ -20,15 +20,9 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   let urlPath = req.url.split('?')[0];
 
-  if (urlPath === '/socket.io/socket.io.js') {
-    const p = path.join(__dirname, 'node_modules', 'socket.io', 'client-dist', 'socket.io.js');
-    if (fs.existsSync(p)) {
-      res.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=86400' });
-      return res.end(fs.readFileSync(p));
-    }
-  }
-
   if (urlPath === '/') urlPath = '/index.html';
+  // Let Socket.IO handle its own requests
+  if (urlPath.startsWith('/socket.io/')) return;
   const filePath = path.join(__dirname, 'public', urlPath);
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath);
