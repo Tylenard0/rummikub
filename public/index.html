@@ -1047,85 +1047,6 @@ function setTileSize(sz) {
   document.querySelectorAll('.size-pill').forEach(p => p.classList.toggle('active', p.dataset.size === sz));
 }
 
-// ─── Sound ────────────────────────────────────────────────────────────────────
-let audioCtx = null;
-function getAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-function playSound(type) {
-  if (!soundEnabled) return;
-  try {
-    const ctx = getAudio();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    if (type === 'select') {
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.06);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-      osc.start(); osc.stop(ctx.currentTime + 0.1);
-    } else if (type === 'play') {
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-      osc.start(); osc.stop(ctx.currentTime + 0.2);
-    } else if (type === 'draw') {
-      osc.frequency.setValueAtTime(300, ctx.currentTime);
-      gain.gain.setValueAtTime(0.07, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      osc.start(); osc.stop(ctx.currentTime + 0.15);
-    } else if (type === 'win') {
-      [523,659,784,1047].forEach((f, i) => {
-        const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
-        o2.connect(g2); g2.connect(ctx.destination);
-        o2.frequency.value = f;
-        g2.gain.setValueAtTime(0.1, ctx.currentTime + i*0.1);
-        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.1 + 0.2);
-        o2.start(ctx.currentTime + i*0.1); o2.stop(ctx.currentTime + i*0.1 + 0.25);
-      });
-    }
-  } catch(e) {}
-}
-function toggleSound() {
-  soundEnabled = document.getElementById('sound-toggle').checked;
-}
-
-// ─── Settings overlay ─────────────────────────────────────────────────────────
-function toggleSettings() {
-  const ov = document.getElementById('settings-overlay');
-  const isOpen = ov.classList.contains('open');
-  if (!isOpen) {
-    buildPaletteGrid();
-    // Sync size pills
-    document.querySelectorAll('.size-pill').forEach(p => p.classList.toggle('active', p.dataset.size === currentSize));
-    document.querySelectorAll('.felt-pill').forEach(p => p.classList.toggle('active', p.dataset.felt === currentFelt));
-  }
-  ov.classList.toggle('open');
-}
-function settingsOutside(e) {
-  if (e.target === document.getElementById('settings-overlay')) toggleSettings();
-}
-
-// ─── Quit ─────────────────────────────────────────────────────────────────────
-function confirmQuit() {
-  document.getElementById('confirm-overlay').classList.add('open');
-}
-function closeConfirm() {
-  document.getElementById('confirm-overlay').classList.remove('open');
-}
-function doQuit() {
-  closeConfirm();
-  toggleSettings();
-  socket.emit('quit_game', {}, r => {
-    if (r?.error) toast(r.error, 'err');
-    else location.reload();
-  });
-}
-
-
 // ─── Sound Engine (Web Audio API — no files needed) ──────────────────────────
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
@@ -1260,7 +1181,13 @@ function buildPicker() {
 }
 
 // ─── Socket / State ───────────────────────────────────────────────────────────
-const socket = io({ transports: ['websocket', 'polling'] });
+let socket;
+try {
+  socket = io({ transports: ['websocket', 'polling'] });
+} catch(e) {
+  console.error('Socket.IO failed to load:', e);
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:1rem;font-family:sans-serif;color:#c8993a;background:#1a1208"><div style="font-size:2rem">🎲</div><div>Could not connect to server.</div><button onclick="location.reload()" style="padding:0.75rem 1.5rem;background:#c8993a;color:#1a1208;border:none;border-radius:10px;font-size:1rem;cursor:pointer">Retry</button></div>';
+}
 let myId = socket.id;
 let myName = '';
 let roomId = '';
@@ -1835,7 +1762,7 @@ document.addEventListener('DOMContentLoaded', () => {
   z-index:1;
   font-family:'DM Sans',sans-serif;
 ">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.2
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.4
 </div>
 </body>
 </html>
