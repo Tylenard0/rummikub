@@ -1,0 +1,14 @@
+{
+  "name": "rummikub-pwa",
+  "version": "2.0.0",
+  "description": "Rummikub PWA — LAN & Internet Multiplayer, iPad-optimized",
+  "main": "server.js",
+  "engines": { "node": ">=16" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.2"
+  }
+}
