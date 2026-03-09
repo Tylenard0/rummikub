@@ -737,7 +737,6 @@ body.felt-brown .board-scroll { background: radial-gradient(ellipse at 50% 50%, 
     <div class="logo-family">Parsons Family</div>
     <div class="logo-main">🎲 Rummikub</div>
     <div class="logo-sub">Fun for the Parsons Family!</div>
-    <div style="font-size:0.6rem;color:rgba(200,153,58,0.4);letter-spacing:0.15em;margin-top:0.2rem">v5.0</div>
   </div>
 
   <div class="card">
@@ -1011,7 +1010,7 @@ function buildPaletteGrid() {
       </div>
       <div class="palette-name">${pal.name}</div>`;
     card.addEventListener('click', () => {
-      if (!amHost) { toast('Only the host can change the palette', 'err'); return; }
+      if (typeof amHost !== 'undefined' && !amHost) { toast('Only the host can change the palette', 'err'); return; }
       socket.emit('set_palette', { palette: pal.id }, r => {
         if (r?.error) toast(r.error, 'err');
       });
@@ -1019,11 +1018,9 @@ function buildPaletteGrid() {
     grid.appendChild(card);
   });
   const note = document.getElementById('palette-host-note');
-  if (note) note.textContent = amHost ? '(host only)' : '(set by host)';
+  if (note) note.textContent = (typeof amHost !== 'undefined' && amHost) ? '(host only)' : '(set by host)';
 }
 
-// Apply on boot
-applyPalette('classic');
 
 // ─── Felt colour ──────────────────────────────────────────────────────────────
 function setFelt(felt) {
@@ -1267,6 +1264,7 @@ let workingBoard = [];
 let multiSelected = []; // [{ tile, src:'rack'|'board', si, ti }, ...] in tap order
 let sortMode = 'color';
 let amHost = false;
+applyPalette('classic'); // safe to call now — all functions defined above
 
 socket.on('connect', () => { myId = socket.id; });
 
@@ -1814,5 +1812,20 @@ el('inp-code').addEventListener('input',   e => { e.target.value = e.target.valu
 // Initial leaderboard render
 renderLeaderboard();
 </script>
+
+<!-- Footer -->
+<div style="
+  position:fixed; bottom:0; left:0; right:0;
+  text-align:center;
+  padding:0.3rem 1rem max(0.3rem, env(safe-area-inset-bottom));
+  font-size:0.62rem;
+  color:rgba(200,153,58,0.35);
+  letter-spacing:0.12em;
+  pointer-events:none;
+  z-index:1;
+  font-family:'DM Sans',sans-serif;
+">
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.0
+</div>
 </body>
 </html>
