@@ -1811,19 +1811,16 @@ function toast(msg, type = '') {
 
 
 // ─── DOM Ready init ───────────────────────────────────────────────────────────
+// ─── DOM Ready ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   buildPicker();
   applyPalette('classic');
   setFelt('felt-dark');
+  renderLeaderboard();
+  el('inp-name').addEventListener('keydown', e => { if (e.key === 'Enter') createRoom(); });
+  el('inp-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
+  el('inp-code').addEventListener('input',   e => { e.target.value = e.target.value.toUpperCase(); });
 });
-
-// Keyboard shortcuts
-el('inp-name').addEventListener('keydown', e => { if (e.key === 'Enter') createRoom(); });
-el('inp-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
-el('inp-code').addEventListener('input',   e => { e.target.value = e.target.value.toUpperCase(); });
-
-// Initial leaderboard render
-renderLeaderboard();
 </script>
 
 <!-- Footer -->
@@ -1838,7 +1835,7 @@ renderLeaderboard();
   z-index:1;
   font-family:'DM Sans',sans-serif;
 ">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.0
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.2
 </div>
 </body>
 </html>
