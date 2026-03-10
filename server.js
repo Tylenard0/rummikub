@@ -319,7 +319,17 @@ io.on('connection', (socket) => {
 
   socket.on('draw_tile',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(drawTile(r, socket.id));          broadcastState(r); });
   socket.on('play_turn',   ({ board }, cb) => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(playTurn(r, socket.id, board));   broadcastState(r); });
-  socket.on('undo_turn',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(undoTurn(r, socket.id)); io.to(socket.id).emit('state', safeState(r, socket.id)); });
+  socket.on('undo_turn',   (_, cb)        => {
+    const r = rooms[currentRoom];
+    if (!r) {
+      // Room not found — send a soft error without crashing
+      return cb?.({ error: 'Session expired — please rejoin or refresh.' });
+    }
+    const res = undoTurn(r, socket.id);
+    cb?.(res);
+    // Only emit back to this player so board resets for them
+    io.to(socket.id).emit('state', safeState(r, socket.id));
+  });
   socket.on('request_state', ()           => { const r = rooms[currentRoom]; if (r) socket.emit('state', safeState(r, socket.id)); });
 
   socket.on('chat', ({ msg }) => {
@@ -381,6 +391,49 @@ io.on('connection', (socket) => {
     }
 
     socket.leave(currentRoom);
+    cb?.({ ok: true });
+    broadcastState(room);
+  });
+
+  socket.on('boot_player', ({ targetId }, cb) => {
+    const room = rooms[currentRoom];
+    if (!room) return cb?.({ error: 'Room not found' });
+    if (room.players[0]?.id !== socket.id) return cb?.({ error: 'Only the host can boot players' });
+    if (socket.id === targetId) return cb?.({ error: 'Cannot boot yourself' });
+
+    const idx = room.players.findIndex(p => p.id === targetId);
+    if (idx === -1) return cb?.({ error: 'Player not found' });
+    const player = room.players[idx];
+
+    // Return their tiles to pool if game is active
+    if (room.phase === 'playing') {
+      room.pool.push(...player.rack);
+      for (let i = room.pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [room.pool[i], room.pool[j]] = [room.pool[j], room.pool[i]];
+      }
+      room.log.push(`🚫 ${player.name} was booted. Their tiles returned to the pool.`);
+      const wasTheirTurn = room.players[room.currentPlayerIndex]?.id === targetId;
+      room.players.splice(idx, 1);
+      if (room.players.length < 2) {
+        room.phase = 'ended';
+        room.winner = room.players[0]?.name || 'Nobody';
+        room.log.push('Not enough players. Game over!');
+      } else {
+        if (wasTheirTurn) {
+          room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
+          advanceTurn(room);
+        } else if (idx < room.currentPlayerIndex) {
+          room.currentPlayerIndex--;
+        }
+      }
+    } else {
+      room.players.splice(idx, 1);
+      room.log.push(`🚫 ${player.name} was removed from the lobby.`);
+    }
+
+    // Notify booted player
+    io.to(targetId).emit('booted', { msg: 'You were removed from the game by the host.' });
     cb?.({ ok: true });
     broadcastState(room);
   });

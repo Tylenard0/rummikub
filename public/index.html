@@ -249,6 +249,73 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
 .lb-name{flex:1}
 .lb-rank.gold{color:#f0c060}.lb-rank.silver{color:#b0b8c8}.lb-rank.bronze{color:#c8784a}
 
+/* Parsons watermark */
+.board-scroll::before{
+  content:'PARSONS';
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-30deg);
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(3rem,12vw,7rem);
+  color:rgba(200,153,58,.07);
+  letter-spacing:.35em;
+  pointer-events:none;
+  white-space:nowrap;
+  z-index:0;
+  user-select:none;
+}
+#lobby::before,#waiting::before{
+  content:'PARSONS';
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-30deg);
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(3rem,14vw,8rem);
+  color:rgba(200,153,58,.05);
+  letter-spacing:.35em;
+  pointer-events:none;
+  white-space:nowrap;
+  z-index:0;
+  user-select:none;
+}
+
+/* Strong YOUR TURN indicator */
+.your-turn-bar{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:40;
+  padding:.35rem 1rem;
+  background:linear-gradient(90deg,var(--gold),var(--gold2),var(--gold));
+  background-size:200% 100%;
+  animation:barSlide 2s linear infinite;
+  text-align:center;
+  font-family:'Cinzel Decorative',serif;
+  font-size:.72rem;
+  color:#1a1208;
+  letter-spacing:.18em;
+  font-weight:900;
+  pointer-events:none;
+}
+.your-turn-bar.active{display:block;}
+@keyframes barSlide{0%{background-position:0% 0}100%{background-position:200% 0}}
+
+/* Pulse ring around YOUR TILES label when your turn */
+.rack-area.my-turn{
+  box-shadow:0 0 0 2px var(--gold),0 0 24px rgba(200,153,58,.35);
+  transition:box-shadow .3s;
+}
+
+/* Unread chat badge */
+.chat-unread-dot{
+  display:none;position:absolute;top:-3px;right:-3px;
+  width:10px;height:10px;border-radius:50%;
+  background:#f05050;border:2px solid var(--bg);
+  animation:dotPop .3s cubic-bezier(.34,1.56,.64,1);
+}
+.chat-unread-dot.visible{display:block;}
+@keyframes dotPop{from{transform:scale(0)}to{transform:scale(1)}}
+.chat-icon-wrap{position:relative;display:inline-flex;}
+
+/* Boot player button */
+.boot-btn{margin-left:auto;font-size:.62rem;padding:.15rem .45rem;background:rgba(200,50,50,.15);border:1px solid rgba(200,50,50,.35);border-radius:6px;color:#f07070;cursor:pointer;display:none;}
+.boot-btn.visible{display:inline-block;}
+
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(200,153,58,.22);border-radius:2px}
@@ -267,7 +334,7 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
   </div>
   <div class="card">
     <div class="card-title">Set Up Your Player</div>
-    <div class="field"><label>Your Name</label><input type="text" id="inp-name" placeholder="e.g. Alice" maxlength="16" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field"><label>Your Name</label><input type="text" id="inp-name" placeholder="e.g. Lois" maxlength="16" autocomplete="off" autocorrect="off" spellcheck="false"></div>
     <div class="field"><label>Pick Your Colour</label><div class="avatar-row" id="avatar-row"></div></div>
     <button class="btn btn-gold" onclick="createRoom()">✦ Create New Room</button>
     <div class="divider">or join existing</div>
@@ -312,16 +379,19 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
   <div style="color:var(--muted);font-size:.76rem;text-align:center">Waiting for host… (2–6 players)</div>
 </div>
 
+<!-- YOUR TURN bar -->
+<div class="your-turn-bar" id="your-turn-bar">✦ YOUR TURN ✦</div>
+
 <!-- GAME -->
 <div id="game" class="view">
   <div class="topbar">
     <button class="topbar-logo-btn" onclick="toggleSettings()" title="Settings">🎲</button>
     <div id="p-chips" style="display:flex;gap:.35rem;flex:1;overflow-x:auto"></div>
     <span class="pool-info" id="pool-txt">Pool: —</span>
-    <button class="icon-btn" onclick="toggleChat()" title="Chat">💬</button>
+    <span class="chat-icon-wrap"><button class="icon-btn" onclick="toggleChat()" title="Chat">💬</button><span class="chat-unread-dot" id="chat-unread-dot"></span></span>
   </div>
   <div class="board-scroll" id="board-scroll"><div class="board-area" id="board-area"></div></div>
-  <div class="rack-area">
+  <div class="rack-area" id="rack-area">
     <div class="rack-header">
       <span class="rack-lbl">YOUR TILES</span>
       <span id="turn-badge" class="turn-badge"></span>
@@ -428,7 +498,7 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v5.5GPT
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6
 </div>
 
 <script>
@@ -634,6 +704,10 @@ let myName = '';
 let roomId = '';
 
 socket.on('connect', () => { myId = socket.id; });
+socket.on('booted', ({ msg }) => {
+  alert(msg || 'You were removed from the game.');
+  location.reload();
+});
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 let gState         = null;
@@ -642,6 +716,8 @@ let amHost         = false;
 let workingBoard   = [];
 let multiSelected  = [];
 let sortMode       = 'color';
+let lastSeenChatCount = 0;
+let chatIsOpen = false;
 
 socket.on('state', state => {
   const wasMyTurn  = isMyTurn;
@@ -705,12 +781,19 @@ function applyRules() {
 function renderWaiting(state) {
   const list = el('wait-list');
   list.innerHTML = '';
+  const isHost = state.players?.[0]?.id === myId;
   (state.players||[]).forEach((p,i) => {
     const li = document.createElement('li');
     li.innerHTML = `<span class="p-avatar" style="background:${p.avatarColor}">${p.name.slice(0,2).toUpperCase()}</span>${p.name}${p.id===myId?' (you)':''}${i===0?'<span class="p-host">HOST</span>':''}`;
+    if (isHost && p.id !== myId) {
+      const btn = document.createElement('button');
+      btn.className = 'boot-btn visible';
+      btn.textContent = 'Boot';
+      btn.onclick = () => bootPlayer(p.id, p.name);
+      li.appendChild(btn);
+    }
     list.appendChild(li);
   });
-  const isHost = state.players?.[0]?.id === myId;
   el('rules-panel').style.display   = isHost ? 'block' : 'none';
   el('rules-summary').style.display = !isHost ? 'block' : 'none';
   if (state.rules) {
@@ -731,20 +814,41 @@ function renderGame(state) {
     const c = document.createElement('div');
     c.className = 'p-chip'+(i===state.currentPlayerIndex?' active':'')+(p.id===myId?' you':'');
     c.innerHTML = `<span class="p-chip-dot" style="background:${p.avatarColor}"></span>${p.name} <b>${p.rackCount}</b>`;
+    if (amHost && p.id !== myId) {
+      const bb = document.createElement('span');
+      bb.style.cssText='font-size:.6rem;padding:.1rem .35rem;background:rgba(200,50,50,.2);border:1px solid rgba(200,50,50,.4);border-radius:4px;color:#f07070;cursor:pointer;margin-left:.2rem;';
+      bb.textContent='✕';
+      bb.title=`Boot ${p.name}`;
+      bb.onclick=(e)=>{e.stopPropagation();bootPlayer(p.id,p.name);};
+      c.appendChild(bb);
+    }
     chips.appendChild(c);
   });
   el('pool-txt').textContent = `Pool: ${state.pool}`;
   const badge = el('turn-badge');
-  if (isMyTurn && state.phase==='playing') { badge.textContent='YOUR TURN'; badge.className='turn-badge yours'; }
-  else { badge.textContent=`${state.players[state.currentPlayerIndex]?.name||'…'}'s turn`; badge.className='turn-badge theirs'; }
+  if (isMyTurn && state.phase==='playing') {
+    badge.textContent='YOUR TURN'; badge.className='turn-badge yours';
+    el('your-turn-bar').classList.add('active');
+    el('rack-area')?.classList.add('my-turn');
+  } else {
+    badge.textContent=`${state.players[state.currentPlayerIndex]?.name||'…'}'s turn`;
+    badge.className='turn-badge theirs';
+    el('your-turn-bar').classList.remove('active');
+    el('rack-area')?.classList.remove('my-turn');
+  }
   const showMeld = me && !me.hasInitialMeld && isMyTurn && state.rules?.initialMeldMin > 0;
   el('meld-note').style.display = showMeld ? 'inline' : 'none';
   if (showMeld) el('meld-note').textContent = `⚡ First meld ≥ ${state.rules.initialMeldMin} pts`;
   renderBoard(isMyTurn ? workingBoard : state.board);
   if (me?.rack) renderRack(me.rack);
   const chatLog = el('chat-log');
+  const humanMsgs = (state.log||[]).filter(l => l.startsWith('💬'));
   chatLog.innerHTML = (state.log||[]).map(l=>`<div>${l}</div>`).join('');
   chatLog.scrollTop = chatLog.scrollHeight;
+  // Unread chat badge — only for 💬 human messages, not when chat is open
+  if (!chatIsOpen && humanMsgs.length > lastSeenChatCount) {
+    el('chat-unread-dot').classList.add('visible');
+  }
 }
 
 // ─── Board ────────────────────────────────────────────────────────────────────
@@ -892,7 +996,52 @@ function updateSelTray() {
   if (n>0) el('sel-count').textContent = `${n} tile${n>1?'s':''} selected`;
 }
 
-// ─── Drag (mouse) ─────────────────────────────────────────────────────────────
+// ─── Auto-sort sets ───────────────────────────────────────────────────────────
+function sortSetTiles(set) {
+  if (!set || set.length < 2) return set;
+  const nj = set.filter(t => !t.isJoker);
+  const jokers = set.filter(t => t.isJoker);
+  if (!nj.length) return set; // all jokers, nothing to sort
+
+  const allSameColor = nj.every(t => t.color === nj[0].color);
+
+  if (allSameColor) {
+    // ── RUN: sort real tiles by number, then slot jokers into gaps ──
+    const sorted = nj.slice().sort((a, b) => a.num - b.num);
+    if (!jokers.length) return sorted;
+
+    // Build the full sequence by inserting jokers into gaps
+    const result = [sorted[0]];
+    let jLeft = jokers.length;
+    for (let i = 1; i < sorted.length; i++) {
+      const gap = sorted[i].num - sorted[i-1].num - 1; // how many numbers are missing
+      // Fill gap with available jokers
+      for (let g = 0; g < gap && jLeft > 0; g++) {
+        result.push(jokers[jokers.length - jLeft]);
+        jLeft--;
+      }
+      result.push(sorted[i]);
+    }
+    // Any remaining jokers go at the end (extend the run upward)
+    while (jLeft > 0) {
+      result.push(jokers[jokers.length - jLeft]);
+      jLeft--;
+    }
+    return result;
+  } else {
+    // ── GROUP: all same number, different colours — jokers at end ──
+    const sorted = nj.slice().sort((a, b) => {
+      const order = ['red','blue','orange','black'];
+      return order.indexOf(a.color) - order.indexOf(b.color);
+    });
+    return [...sorted, ...jokers];
+  }
+}
+function sortAllSets() {
+  workingBoard = workingBoard.map(s => s ? sortSetTiles(s) : s);
+}
+
+
 function parseDrag(e) { try { return JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return null; } }
 function getTileById(id) {
   const me = gState?.players.find(p=>p.id===myId);
@@ -919,6 +1068,7 @@ function dropToRack(e) {
 }
 function rerender() {
   workingBoard = workingBoard.filter(s=>s&&s.length>0);
+  sortAllSets();
   renderBoard(workingBoard);
   const me=gState?.players.find(p=>p.id===myId);
   if (me?.rack) renderRack(me.rack);
@@ -946,8 +1096,15 @@ function drawTileAction() {
 }
 function undoTurn() {
   socket.emit('undo_turn', {}, r => {
-    if (r.error) toast(r.error,'err');
-    else { workingBoard=clone(gState?.board||[]); multiSelected=[]; updateSelTray(); toast('Undone'); }
+    if (r.error) {
+      toast(r.error, 'err');
+      // If session expired, request fresh state rather than crashing
+      if (r.error.includes('expired') || r.error.includes('not found')) {
+        socket.emit('request_state');
+      }
+    } else {
+      workingBoard=clone(gState?.board||[]); multiSelected=[]; updateSelTray(); toast('Undone');
+    }
   });
 }
 function sortRack() {
@@ -957,6 +1114,13 @@ function sortRack() {
   if (sortMode==='color') me.rack.sort((a,b)=>order.indexOf(a.color)-order.indexOf(b.color)||a.num-b.num);
   else me.rack.sort((a,b)=>a.num-b.num||order.indexOf(a.color)-order.indexOf(b.color));
   renderRack(me.rack);
+}
+function bootPlayer(playerId, playerName) {
+  if (!confirm(`Boot ${playerName} from the game?`)) return;
+  socket.emit('boot_player', { targetId: playerId }, r => {
+    if (r?.error) toast(r.error, 'err');
+    else toast(`${playerName} was booted`, 'ok');
+  });
 }
 function requestRematch() {
   socket.emit('rematch', {}, r => {
@@ -982,7 +1146,17 @@ function showWin(state) {
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
-function toggleChat() { const o=el('chat-overlay'); o.style.display=o.style.display==='none'?'flex':'none'; if(o.style.display==='flex') setTimeout(()=>el('chat-inp').focus(),100); }
+function toggleChat() {
+  const o=el('chat-overlay');
+  chatIsOpen = o.style.display==='none';
+  o.style.display=chatIsOpen?'flex':'none';
+  if (chatIsOpen) {
+    // Mark all current human messages as seen
+    lastSeenChatCount = (gState?.log||[]).filter(l=>l.startsWith('💬')).length;
+    el('chat-unread-dot').classList.remove('visible');
+    setTimeout(()=>el('chat-inp').focus(),100);
+  }
+}
 function closeChatOutside(e) { if(e.target===el('chat-overlay')) toggleChat(); }
 function sendChat() { const inp=el('chat-inp'); const msg=inp.value.trim(); if(!msg) return; socket.emit('chat',{msg}); inp.value=''; }
 
