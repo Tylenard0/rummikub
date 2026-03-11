@@ -48,7 +48,7 @@ const COLORS           = ['red', 'blue', 'orange', 'black'];
 const TILES_PER_PLAYER = 14;
 const MAX_PLAYERS      = 6;
 const MIN_PLAYERS      = 2;
-const DEFAULT_RULES    = { initialMeldMin: 30 };
+const DEFAULT_RULES    = { initialMeldMin: 30, turnTimer: 0 };
 const AVATAR_COLORS    = ['#e05050','#4a90d9','#e07820','#50c878','#9b59b6','#e8c84a'];
 
 // ─── Tiles ────────────────────────────────────────────────────────────────────
@@ -337,6 +337,8 @@ io.on('connection', (socket) => {
     if (room.phase !== 'lobby') return cb?.({ error: 'Cannot change rules mid-game' });
     if (typeof rules.initialMeldMin === 'number')
       room.rules.initialMeldMin = Math.max(0, Math.min(100, rules.initialMeldMin));
+    if (typeof rules.turnTimer === 'number')
+      room.rules.turnTimer = [0, 30, 60, 90, 120].includes(rules.turnTimer) ? rules.turnTimer : 0;
     cb?.({ ok: true });
     broadcastState(room);
   });

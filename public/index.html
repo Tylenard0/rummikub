@@ -262,25 +262,7 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
 .lb-name{flex:1}
 .lb-rank.gold{color:#f0c060}.lb-rank.silver{color:#b0b8c8}.lb-rank.bronze{color:#c8784a}
 
-/* ── Tile shimmer ── */
-@keyframes shimmer {
-  0%   { left:-120%; }
-  100% { left:220%; }
-}
-.tile::after {
-  content:'';
-  position:absolute;
-  top:0;bottom:0;
-  left:-120%;
-  width:60%;
-  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);
-  transform:skewX(-15deg);
-  pointer-events:none;
-  border-radius:7px;
-  animation: shimmer 6s ease-in-out infinite;
-  animation-delay: var(--shimmer-delay, 0s);
-}
-.tile[data-c="joker"]::after { background:linear-gradient(105deg,transparent 30%,rgba(192,96,240,.35) 50%,transparent 70%); }
+/* shimmer removed */
 
 /* ── Joker skull tile ── */
 .tile[data-c="joker"] {
@@ -445,6 +427,16 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
         <div><div class="rule-label">No initial meld minimum</div><div class="rule-desc">Go down with any valid set — no 30-point requirement</div></div>
         <label class="toggle"><input type="checkbox" id="rule-no-meld" onchange="applyRules()"><span class="toggle-slider"></span></label>
       </div>
+      <div class="rule-row">
+        <div><div class="rule-label">Turn timer</div><div class="rule-desc">Auto-draw if time runs out</div></div>
+        <select id="rule-timer" onchange="applyRules()" style="background:var(--card);color:var(--text);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.3rem .5rem;font-size:.78rem">
+          <option value="0">Off</option>
+          <option value="30">30 sec</option>
+          <option value="60">60 sec</option>
+          <option value="90">90 sec</option>
+          <option value="120">120 sec</option>
+        </select>
+      </div>
     </div>
   </div>
   <div class="rules-summary" id="rules-summary" style="display:none">Rules: <span id="rules-summary-text">Standard</span></div>
@@ -462,6 +454,10 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
     <button class="icon-btn" onclick="toggleReactionBar()" title="React">😄</button>
     <button class="icon-btn" id="chat-btn" onclick="toggleChat()" title="Chat">💬</button>
   </div>
+  <div id="turn-timer-bar" style="display:none;height:5px;background:rgba(255,255,255,.08);position:relative;overflow:hidden">
+    <div id="turn-timer-fill" style="height:100%;width:100%;background:var(--gold2);transition:background .5s;transform-origin:left"></div>
+  </div>
+  <div id="turn-timer-label" style="display:none;text-align:center;font-size:.72rem;color:var(--gold);letter-spacing:.08em;padding:.2rem 0;font-family:'DM Sans',sans-serif"></div>
   <div class="board-scroll" id="board-scroll"><div class="board-area" id="board-area"></div></div>
   <div class="rack-area">
     <div class="rack-header">
@@ -608,10 +604,11 @@ function toast(msg, type='') {
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
 const PALETTES = [
-  { id:'classic',  name:'Classic',   colors:['#B10F2E','#14BDEB','#FFA630','#1a1a1a'] },
-  { id:'tropical', name:'Tropical',  colors:['#F21B3F','#08BDBD','#ABFF4F','#FF9914'] },
-  { id:'icecream', name:'Ice Cream', colors:['#FF5E5B','#00CECB','#D892D8','#FFED66'] },
-  { id:'neon',     name:'Neon',      colors:['#F7EC59','#92DCE5','#28E240','#FF66D8'] },
+  { id:'classic',   name:'Classic',      colors:['#B10F2E','#14BDEB','#FFA630','#1a1a1a'] },
+  { id:'jewel',     name:'Jewel Box',    colors:['#C0152A','#1A56B0','#0E8C4A','#7B2FBE'] },
+  { id:'pastel',    name:'Pastel Beach', colors:['#F78FA7','#64B5F6','#80CBC4','#FFAB91'] },
+  { id:'colorblind',name:'Clean',       colors:['#009E73','#E69F00','#0072B2','#CC79A7'] },
+  { id:'neon',      name:'Neon Arcade',  colors:['#FF2D78','#00F5FF','#39FF14','#FFE600'] },
 ];
 const P_KEYS = ['--p-red','--p-blue','--p-orange','--p-black'];
 let currentPalette = 'classic';
@@ -782,6 +779,70 @@ function renderLeaderboard() {
   });
 }
 
+// ─── Turn timer (client) ─────────────────────────────────────────────────────
+let turnTimerInterval = null;
+let turnTimerSeconds  = 0;
+
+function startTurnTimer(seconds) {
+  clearTurnTimer();
+  if (!seconds || seconds <= 0) return;
+  turnTimerSeconds = seconds;
+  const bar   = el('turn-timer-bar');
+  const fill  = el('turn-timer-fill');
+  const label = el('turn-timer-label');
+  bar.style.display   = 'block';
+  label.style.display = 'block';
+  let remaining = seconds;
+  function tick() {
+    const pct = (remaining / seconds) * 100;
+    fill.style.width = pct + '%';
+    if (remaining <= 10) {
+      fill.style.background = '#e05050';
+      label.style.color = '#e05050';
+      if (remaining > 0) playTickSound();
+    } else if (remaining <= 20) {
+      fill.style.background = '#E69F00';
+      label.style.color = '#E69F00';
+    } else {
+      fill.style.background = 'var(--gold2)';
+      label.style.color = 'var(--gold)';
+    }
+    label.textContent = remaining > 0 ? remaining + 's' : "Time's up!";
+    remaining--;
+    if (remaining < 0) {
+      clearTurnTimer();
+      // Auto-draw on behalf of current player
+      if (isMyTurn) {
+        toast("Time's up — drawing a tile!", 'err');
+        setTimeout(drawTileAction, 400);
+      }
+      return;
+    }
+    turnTimerInterval = setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+function clearTurnTimer() {
+  if (turnTimerInterval) { clearTimeout(turnTimerInterval); turnTimerInterval = null; }
+  const bar = el('turn-timer-bar'), label = el('turn-timer-label');
+  if (bar)   bar.style.display   = 'none';
+  if (label) label.style.display = 'none';
+}
+
+function playTickSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.frequency.value = 880;
+    g.gain.setValueAtTime(.12, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .08);
+    osc.start(); osc.stop(ctx.currentTime + .08);
+  } catch(e) {}
+}
+
 // ─── Socket ───────────────────────────────────────────────────────────────────
 const socket = io({
   transports: ['websocket', 'polling'],
@@ -914,7 +975,8 @@ function toggleRules() {
 }
 function applyRules() {
   const noMeld = el('rule-no-meld').checked;
-  socket.emit('set_rules', { rules:{ initialMeldMin: noMeld ? 0 : 30 } }, r => {
+  const turnTimer = parseInt(el('rule-timer')?.value || '0');
+  socket.emit('set_rules', { rules:{ initialMeldMin: noMeld ? 0 : 30, turnTimer } }, r => {
     if (r?.error) toast(r.error,'err');
     else toast(noMeld ? '⚡ No meld minimum on!' : 'Standard rules restored');
   });
@@ -940,8 +1002,16 @@ function renderWaiting(state) {
   el('rules-summary').style.display = !isHost ? 'block' : 'none';
   if (state.rules) {
     const noMeld = state.rules.initialMeldMin === 0;
-    if (isHost) { el('rule-no-meld').checked = noMeld; el('rules-badge').style.display = noMeld ? 'inline' : 'none'; }
-    el('rules-summary-text').textContent = noMeld ? '⚡ No initial meld minimum' : 'Standard (initial meld ≥ 30 pts)';
+    const tTimer = state.rules.turnTimer || 0;
+    if (isHost) {
+      el('rule-no-meld').checked = noMeld;
+      if (el('rule-timer')) el('rule-timer').value = String(tTimer);
+      el('rules-badge').style.display = (noMeld || tTimer > 0) ? 'inline' : 'none';
+    }
+    const parts = [];
+    if (noMeld) parts.push('No meld min');
+    if (tTimer > 0) parts.push(tTimer + 's timer');
+    el('rules-summary-text').textContent = parts.length ? parts.join(' · ') : 'Standard';
   }
   el('start-btn').style.display = isHost && (state.players?.length >= 2) ? 'block' : 'none';
 }
@@ -975,6 +1045,22 @@ function renderGame(state) {
   if (showMeld) el('meld-note').textContent = `⚡ First meld ≥ ${state.rules.initialMeldMin} pts`;
   renderBoard(isMyTurn ? workingBoard : state.board);
   if (me?.rack) renderRack(me.rack);
+  // Turn timer — restart on each state update when it's your turn
+  const timerSecs = state.rules?.turnTimer || 0;
+  if (timerSecs > 0 && state.phase === 'playing') {
+    if (isMyTurn) {
+      // Only restart timer if the current player changed
+      const turnKey = state.currentPlayerIndex + '-' + (state.pool ?? 0);
+      if (window._lastTimerTurnKey !== turnKey) {
+        window._lastTimerTurnKey = turnKey;
+        startTurnTimer(timerSecs);
+      }
+    } else {
+      clearTurnTimer();
+    }
+  } else {
+    clearTurnTimer();
+  }
   const chatLog = el('chat-log');
   chatLog.innerHTML = (state.log||[]).map(l=>`<div>${l}</div>`).join('');
   chatLog.scrollTop = chatLog.scrollHeight;
@@ -1068,8 +1154,6 @@ function makeTile(tile, src, si, ti) {
   t.className = 'tile'+(selIdx!==-1?' hi':'');
   t.dataset.c = tile.color; t.dataset.id = tile.id;
   t.draggable = isMyTurn;
-  // Stagger shimmer so tiles don't all flash at once
-  t.style.setProperty('--shimmer-delay', ((tile.id % 12) * 0.5) + 's');
   const skullKey = ['original','cyan','magenta','gold','purple','green'][tile.id % 6];
   t.innerHTML = tile.isJoker
     ? `<img class="tile-skull" src="${SKULL_IMGS[skullKey]}" alt="joker">`
