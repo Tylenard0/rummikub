@@ -125,6 +125,130 @@ body.felt-dark  .board-scroll{background:radial-gradient(ellipse at 50% 50%,#244
 body.felt-light .board-scroll{background:radial-gradient(ellipse at 50% 50%,#3a7a3a 0%,#2a5a2a 100%)}
 body.felt-blue  .board-scroll{background:radial-gradient(ellipse at 50% 50%,#1e3a5a 0%,#0e1e38 100%)}
 body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3a1a 0%,#382210 100%)}
+
+/* ── Cyberpunk ── */
+@keyframes cpScan {
+  0%   { transform:translateY(-100%); }
+  100% { transform:translateY(100vh); }
+}
+@keyframes cpGrid {
+  0%   { background-position:0 0; }
+  100% { background-position:0 60px; }
+}
+body.felt-cyber .board-scroll {
+  background: #0a000f;
+  background-image:
+    linear-gradient(rgba(255,0,200,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,0,200,.08) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 0%, rgba(255,0,200,.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(0,240,255,.12) 0%, transparent 50%);
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+  animation: cpGrid 3s linear infinite;
+}
+body.felt-cyber .board-scroll::after {
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:linear-gradient(transparent 50%, rgba(0,0,0,.04) 50%);
+  background-size:100% 4px;
+}
+body.felt-cyber .board-scroll::before {
+  content:'PARSONS';
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-30deg);
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(3rem,12vw,7rem);
+  color:rgba(255,0,200,.08);
+  letter-spacing:.35em;
+  pointer-events:none;white-space:nowrap;z-index:0;user-select:none;
+  text-shadow: 0 0 30px rgba(255,0,200,.3);
+}
+/* neon tile glow in cyber mode */
+body.felt-cyber .set-row { border-color: rgba(255,0,200,.15); }
+
+/* ── Space ── */
+@keyframes starDrift {
+  0%   { background-position: 0 0, 40px 60px, 130px 270px; }
+  100% { background-position: 0 -200px, 40px -140px, 130px 70px; }
+}
+@keyframes nebulaShift {
+  0%,100% { opacity:.6; }
+  50%      { opacity:1; }
+}
+body.felt-space .board-scroll {
+  background-color: #03001e;
+  background-image:
+    radial-gradient(ellipse at 20% 30%, rgba(100,30,180,.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(20,60,160,.3) 0%, transparent 45%),
+    radial-gradient(ellipse at 60% 10%, rgba(180,20,80,.2) 0%, transparent 40%);
+  position:relative;overflow:hidden;
+}
+body.felt-space .board-scroll::before {
+  content:'PARSONS';
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-30deg);
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(3rem,12vw,7rem);
+  color:rgba(180,160,255,.06);
+  letter-spacing:.35em;
+  pointer-events:none;white-space:nowrap;z-index:0;user-select:none;
+}
+body.felt-space .board-scroll::after {
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, white .8px, transparent 0),
+    radial-gradient(1px 1px at 25% 45%, rgba(255,255,255,.7) .8px, transparent 0),
+    radial-gradient(1px 1px at 40% 25%, white .6px, transparent 0),
+    radial-gradient(1px 1px at 55% 65%, rgba(255,255,255,.9) .8px, transparent 0),
+    radial-gradient(1px 1px at 70% 35%, white .5px, transparent 0),
+    radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,.6) .8px, transparent 0),
+    radial-gradient(1px 1px at 15% 75%, white .7px, transparent 0),
+    radial-gradient(1px 1px at 33% 85%, rgba(255,255,255,.5) .6px, transparent 0),
+    radial-gradient(1px 1px at 65% 90%, white .8px, transparent 0),
+    radial-gradient(1px 1px at 90% 20%, rgba(255,255,255,.7) .7px, transparent 0),
+    radial-gradient(1.5px 1.5px at 48% 50%, white 1px, transparent 0),
+    radial-gradient(1px 1px at 77% 78%, rgba(200,200,255,.8) .8px, transparent 0),
+    radial-gradient(1px 1px at 5%  40%, white .6px, transparent 0),
+    radial-gradient(1px 1px at 92% 88%, rgba(255,255,255,.5) .7px, transparent 0),
+    radial-gradient(1px 1px at 58% 12%, white .8px, transparent 0);
+  animation: starDrift 20s linear infinite;
+}
+
+/* ── Water / Ocean ── */
+@keyframes wave1 {
+  0%,100% { transform: translateX(0) scaleY(1); }
+  50%      { transform: translateX(-3%) scaleY(1.05); }
+}
+@keyframes wave2 {
+  0%,100% { transform: translateX(0) scaleY(1); }
+  50%      { transform: translateX(3%) scaleY(.95); }
+}
+@keyframes caustic {
+  0%   { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
+}
+body.felt-water .board-scroll {
+  background: linear-gradient(180deg, #001a3a 0%, #003a6a 40%, #005580 70%, #006994 100%);
+  position:relative; overflow:hidden;
+}
+body.felt-water .board-scroll::before {
+  content:'PARSONS';
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-30deg);
+  font-family:'Cinzel Decorative',serif;
+  font-size:clamp(3rem,12vw,7rem);
+  color:rgba(100,220,255,.06);
+  letter-spacing:.35em;
+  pointer-events:none;white-space:nowrap;z-index:0;user-select:none;
+}
+body.felt-water .board-scroll::after {
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(ellipse 80px 30px at 20% 30%, rgba(100,220,255,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60px 20px at 70% 60%, rgba(100,220,255,.05) 0%, transparent 70%),
+    radial-gradient(ellipse 100px 40px at 50% 80%, rgba(0,180,220,.08) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(100,220,255,.04) 25%, transparent 25%, transparent 50%, rgba(100,220,255,.04) 50%, rgba(100,220,255,.04) 75%, transparent 75%);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 30px 30px;
+  animation: caustic 8s linear infinite;
+}
 .board-area{min-height:100%;display:flex;flex-wrap:wrap;align-content:flex-start;gap:.55rem}
 .set-wrap{display:flex;flex-direction:column;gap:2px}
 .set-row{display:flex;gap:3px;padding:5px;background:rgba(0,0,0,.22);border:1.5px solid rgba(255,255,255,.06);border-radius:10px;cursor:pointer;transition:border-color .18s;position:relative;touch-action:none}
@@ -513,6 +637,9 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
         <div class="felt-pill"        data-felt="felt-light" onclick="setFelt('felt-light')"><span class="felt-swatch" style="background:#3a7a3a"></span>Light Green</div>
         <div class="felt-pill"        data-felt="felt-blue"  onclick="setFelt('felt-blue')"><span class="felt-swatch" style="background:#1e3a5a"></span>Blue</div>
         <div class="felt-pill"        data-felt="felt-brown" onclick="setFelt('felt-brown')"><span class="felt-swatch" style="background:#5a3a1a"></span>Brown</div>
+        <div class="felt-pill"        data-felt="felt-cyber" onclick="setFelt('felt-cyber')"><span class="felt-swatch" style="background:linear-gradient(135deg,#0a000f,#ff00c8)"></span>Cyberpunk</div>
+        <div class="felt-pill"        data-felt="felt-space" onclick="setFelt('felt-space')"><span class="felt-swatch" style="background:linear-gradient(135deg,#03001e,#7b2fbe)"></span>Space</div>
+        <div class="felt-pill"        data-felt="felt-water" onclick="setFelt('felt-water')"><span class="felt-swatch" style="background:linear-gradient(135deg,#001a3a,#006994)"></span>Ocean</div>
       </div>
     </div>
     <div class="setting-group">
@@ -576,7 +703,7 @@ body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.5
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.77
 </div>
 
 <script>
@@ -642,7 +769,7 @@ function buildPaletteGrid() {
 }
 
 function setFelt(felt) {
-  ['felt-dark','felt-light','felt-blue','felt-brown'].forEach(f => document.body.classList.remove(f));
+  ['felt-dark','felt-light','felt-blue','felt-brown','felt-cyber','felt-space','felt-water'].forEach(f => document.body.classList.remove(f));
   document.body.classList.add(felt);
   currentFelt = felt;
   qsa('.felt-pill').forEach(p => p.classList.toggle('active', p.dataset.felt === felt));
