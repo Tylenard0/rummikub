@@ -593,7 +593,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.78
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.88
 </div>
 
 <script>
@@ -1355,7 +1355,7 @@ function renderGame(state) {
   if (timerSecs > 0 && state.phase === 'playing') {
     if (isMyTurn) {
       // Only restart timer if the current player changed
-      const turnKey = state.currentPlayerIndex + '-' + (state.pool ?? 0);
+      const turnKey = state.currentPlayerIndex + '-' + (state.log?.length ?? 0);
       if (window._lastTimerTurnKey !== turnKey) {
         window._lastTimerTurnKey = turnKey;
         startTurnTimer(timerSecs);
@@ -1367,7 +1367,7 @@ function renderGame(state) {
     clearTurnTimer();
   }
   const chatLog = el('chat-log');
-  chatLog.innerHTML = (state.log||[]).map(l=>`<div>${l}</div>`).join('');
+  chatLog.innerHTML = (state.log||[]).map(l=>`<div>${escHtml(l)}</div>`).join('');
   chatLog.scrollTop = chatLog.scrollHeight;
   const humanCount = (state.log||[]).filter(l => l.startsWith('💬')).length;
   window._humanChatCount = humanCount;
@@ -1691,6 +1691,10 @@ function validRunC(tiles) {
 }
 function setPoints(tiles) {
   return tiles.filter(t=>!t.isJoker).reduce((s,t)=>s+t.num,0)+tiles.filter(t=>t.isJoker).length*30;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ─── Init (runs after DOM is ready) ──────────────────────────────────────────

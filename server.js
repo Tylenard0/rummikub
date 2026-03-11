@@ -30,8 +30,16 @@ const server = http.createServer((req, res) => {
     return res.end(fs.readFileSync(filePath));
   }
 
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html')));
+  // For navigation requests (no extension), serve the SPA shell
+  const ext = path.extname(urlPath);
+  if (!ext) {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    return res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html')));
+  }
+
+  // Unknown asset — return 404
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
 });
 
 const { Server } = require('socket.io');
@@ -368,7 +376,7 @@ io.on('connection', (socket) => {
 
   socket.on('draw_tile',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(drawTile(r, socket.id));          broadcastState(r); });
   socket.on('play_turn',   ({ board }, cb) => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(playTurn(r, socket.id, board));   broadcastState(r); });
-  socket.on('undo_turn',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(undoTurn(r, socket.id)); io.to(socket.id).emit('state', safeState(r, socket.id)); });
+  socket.on('undo_turn',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(undoTurn(r, socket.id)); broadcastState(r); });
   socket.on('request_state', ()           => { const r = rooms[currentRoom]; if (r) socket.emit('state', safeState(r, socket.id)); });
 
   socket.on('chat', ({ msg }) => {
@@ -398,7 +406,7 @@ io.on('connection', (socket) => {
     const room = rooms[currentRoom];
     if (!room) return cb?.({ error: 'Room not found' });
     if (room.players[0]?.id !== socket.id) return cb?.({ error: 'Only host can change palette' });
-    const valid = ['classic','tropical','icecream','neon'];
+    const valid = ['classic','jewel','pastel','colorblind','neon'];
     if (!valid.includes(palette)) return cb?.({ error: 'Invalid palette' });
     room.palette = palette;
     cb?.({ ok: true });
@@ -474,6 +482,9 @@ io.on('connection', (socket) => {
     if (idx === -1) return;
     const name = room.players[idx].name;
     if (room.phase === 'lobby') {
+      room.players.splice(idx, 1);
+    } else if (room.phase === 'ended') {
+      // Game over — just remove the player, no need to preserve their seat
       room.players.splice(idx, 1);
     } else {
       // In-game: keep the player's seat & tiles for reconnect, just note it
