@@ -126,149 +126,19 @@ body.felt-light .board-scroll{background:radial-gradient(ellipse at 50% 50%,#3a7
 body.felt-blue  .board-scroll{background:radial-gradient(ellipse at 50% 50%,#1e3a5a 0%,#0e1e38 100%)}
 body.felt-brown .board-scroll{background:radial-gradient(ellipse at 50% 50%,#5a3a1a 0%,#382210 100%)}
 
-/* ── Cyberpunk (tylenardo.com style) ── */
-/* Dark base, glitchy skull/neon aesthetic, hot magenta + acid green accents */
-@keyframes glitch {
-  0%,95%,100% { clip-path:none; transform:translate(-50%,-50%) rotate(-30deg); }
-  96% { clip-path:inset(20% 0 60% 0); transform:translate(calc(-50% + 4px),-50%) rotate(-30deg); }
-  97% { clip-path:inset(60% 0 10% 0); transform:translate(calc(-50% - 4px),-50%) rotate(-30deg); }
-  98% { clip-path:inset(40% 0 40% 0); transform:translate(calc(-50% + 2px),-50%) rotate(-30deg); }
-}
-@keyframes scanline {
-  0%   { background-position:0 0; }
-  100% { background-position:0 8px; }
-}
-@keyframes cpPulse {
-  0%,100% { opacity:.13; }
-  50%      { opacity:.22; }
-}
-body.felt-cyber .board-scroll {
-  background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0px, rgba(0,0,0,.18) 1px, transparent 1px, transparent 8px),
-    linear-gradient(160deg, #0d0018 0%, #12002a 40%, #0a001a 70%, #150030 100%);
-  position:relative; overflow:hidden;
-}
-body.felt-cyber .board-scroll::before {
-  content:'PARSONS';
-  position:absolute; top:50%; left:50%;
-  transform:translate(-50%,-50%) rotate(-30deg);
-  font-family:'Cinzel Decorative',serif;
-  font-size:clamp(3rem,12vw,7rem);
-  color:rgba(255,0,200,.11);
-  letter-spacing:.35em;
-  pointer-events:none; white-space:nowrap; z-index:0; user-select:none;
-  text-shadow: 2px 0 rgba(0,255,200,.15), -2px 0 rgba(255,0,200,.15);
-  animation: glitch 6s steps(1) infinite;
-}
-body.felt-cyber .board-scroll::after {
-  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
-  background:
-    radial-gradient(ellipse at 15% 85%, rgba(255,0,200,.12) 0%, transparent 45%),
-    radial-gradient(ellipse at 85% 15%, rgba(0,255,200,.10) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 50%, rgba(120,0,255,.08) 0%, transparent 60%);
-  animation: cpPulse 4s ease-in-out infinite;
-}
-body.felt-cyber .set-row  { border-color:rgba(255,0,200,.2); }
-body.felt-cyber .tile     { box-shadow:0 2px 8px rgba(255,0,200,.15); }
-
-/* ── Space ── */
-@keyframes twinkle {
-  0%,100% { opacity:1; } 50% { opacity:.3; }
-}
-@keyframes nebulaDrift {
-  0%,100% { background-position:0% 0%; }
-  50%      { background-position:2% 3%; }
-}
-body.felt-space .board-scroll {
-  background:
-    radial-gradient(ellipse at 25% 20%, rgba(88,0,180,.4) 0%, transparent 55%),
-    radial-gradient(ellipse at 75% 80%, rgba(0,40,140,.45) 0%, transparent 55%),
-    radial-gradient(ellipse at 60% 40%, rgba(160,0,80,.2) 0%, transparent 40%),
-    #020010;
-  position:relative; overflow:hidden;
-  animation: nebulaDrift 18s ease-in-out infinite;
-}
-body.felt-space .board-scroll::before {
-  content:'PARSONS';
-  position:absolute; top:50%; left:50%;
-  transform:translate(-50%,-50%) rotate(-30deg);
-  font-family:'Cinzel Decorative',serif;
-  font-size:clamp(3rem,12vw,7rem);
-  color:rgba(180,140,255,.07);
-  letter-spacing:.35em;
-  pointer-events:none; white-space:nowrap; z-index:0; user-select:none;
-  text-shadow:0 0 40px rgba(180,140,255,.2);
-}
-body.felt-space .board-scroll::after {
-  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
-  background-image:
-    radial-gradient(circle 1px at  8% 12%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 19%  7%, rgba(255,255,255,.8) 100%, transparent),
-    radial-gradient(circle 1.5px at 31% 22%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 44% 38%, rgba(200,200,255,.9) 100%, transparent),
-    radial-gradient(circle 1px at 52%  9%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 63% 29%, rgba(255,255,255,.7) 100%, transparent),
-    radial-gradient(circle 2px  at 71% 16%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 82% 44%, rgba(255,230,255,.8) 100%, transparent),
-    radial-gradient(circle 1px at 90%  5%, #fff 100%, transparent),
-    radial-gradient(circle 1px at  6% 55%, rgba(255,255,255,.6) 100%, transparent),
-    radial-gradient(circle 1px at 17% 68%, #fff 100%, transparent),
-    radial-gradient(circle 1.5px at 28% 77%, rgba(200,200,255,.9) 100%, transparent),
-    radial-gradient(circle 1px at 39% 88%, rgba(255,255,255,.7) 100%, transparent),
-    radial-gradient(circle 1px at 55% 62%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 67% 73%, rgba(255,220,255,.8) 100%, transparent),
-    radial-gradient(circle 2px  at 78% 85%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 87% 60%, rgba(255,255,255,.6) 100%, transparent),
-    radial-gradient(circle 1px at 93% 78%, rgba(200,200,255,.9) 100%, transparent),
-    radial-gradient(circle 1px at 13% 92%, #fff 100%, transparent),
-    radial-gradient(circle 1px at 47% 95%, rgba(255,255,255,.7) 100%, transparent);
-}
-
-/* ── Deep Water (fatfishlabs.com style) ── */
-/* Deep ocean: dark navy → teal with bioluminescent glow, pressure depth feel */
-@keyframes depthPulse {
-  0%,100% { opacity:.7; transform:scale(1); }
-  50%      { opacity:1;  transform:scale(1.04); }
-}
-@keyframes currentDrift {
-  0%   { background-position:0% 0%; }
-  50%  { background-position:4% 8%; }
-  100% { background-position:0% 0%; }
-}
-@keyframes bubbleRise {
-  0%   { transform:translateY(0) translateX(0); opacity:.5; }
-  100% { transform:translateY(-120px) translateX(8px); opacity:0; }
-}
-body.felt-water .board-scroll {
-  background:
-    radial-gradient(ellipse at 50% 100%, rgba(0,180,160,.18) 0%, transparent 60%),
-    radial-gradient(ellipse at 20%  60%, rgba(0,80,180,.25) 0%, transparent 50%),
-    radial-gradient(ellipse at 80%  40%, rgba(0,60,120,.2) 0%, transparent 50%),
-    linear-gradient(180deg, #000d1a 0%, #001a2e 30%, #002a3a 60%, #00394a 100%);
-  position:relative; overflow:hidden;
-  animation: currentDrift 20s ease-in-out infinite;
-}
-body.felt-water .board-scroll::before {
-  content:'PARSONS';
-  position:absolute; top:50%; left:50%;
-  transform:translate(-50%,-50%) rotate(-30deg);
-  font-family:'Cinzel Decorative',serif;
-  font-size:clamp(3rem,12vw,7rem);
-  color:rgba(0,220,200,.07);
-  letter-spacing:.35em;
-  pointer-events:none; white-space:nowrap; z-index:0; user-select:none;
-  text-shadow:0 0 60px rgba(0,220,200,.15);
-}
-body.felt-water .board-scroll::after {
-  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(ellipse 120px 50px at 20% 70%, rgba(0,220,200,.08) 0%, transparent 70%),
-    radial-gradient(ellipse 80px  35px at 55% 30%, rgba(0,180,220,.07) 0%, transparent 70%),
-    radial-gradient(ellipse 200px 80px at 80% 80%, rgba(0,150,180,.06) 0%, transparent 70%),
-    radial-gradient(ellipse 60px  25px at 40% 55%, rgba(0,200,180,.09) 0%, transparent 70%),
-    radial-gradient(ellipse 90px  40px at 10% 20%, rgba(0,160,200,.05) 0%, transparent 70%);
-  animation: depthPulse 8s ease-in-out infinite;
-}
+/* ── Canvas backgrounds (space / water / synthwave) ── */
+body.felt-cyber .board-scroll,
+body.felt-space .board-scroll,
+body.felt-water .board-scroll { background:#000; position:relative; overflow:hidden; }
+/* canvas sits behind board content */
+#bg-canvas { position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none; }
+body.felt-cyber #bg-canvas,
+body.felt-space #bg-canvas,
+body.felt-water #bg-canvas { display:block; }
+/* board content sits above canvas */
+body.felt-cyber .board-area,
+body.felt-space .board-area,
+body.felt-water .board-area { position:relative;z-index:1; }
 .board-area{min-height:100%;display:flex;flex-wrap:wrap;align-content:flex-start;gap:.55rem}
 .set-wrap{display:flex;flex-direction:column;gap:2px}
 .set-row{display:flex;gap:3px;padding:5px;background:rgba(0,0,0,.22);border:1.5px solid rgba(255,255,255,.06);border-radius:10px;cursor:pointer;transition:border-color .18s;position:relative;touch-action:none}
@@ -602,7 +472,7 @@ body.felt-water .board-scroll::after {
     <div id="turn-timer-fill" style="height:100%;width:100%;background:var(--gold2);transition:background .5s;transform-origin:left"></div>
   </div>
   <div id="turn-timer-label" style="display:none;text-align:center;font-size:.72rem;color:var(--gold);letter-spacing:.08em;padding:.2rem 0;font-family:'DM Sans',sans-serif"></div>
-  <div class="board-scroll" id="board-scroll"><div class="board-area" id="board-area"></div></div>
+  <div class="board-scroll" id="board-scroll"><canvas id="bg-canvas"></canvas><div class="board-area" id="board-area"></div></div>
   <div class="rack-area">
     <div class="rack-header">
       <span class="rack-lbl">YOUR TILES</span>
@@ -657,9 +527,9 @@ body.felt-water .board-scroll::after {
         <div class="felt-pill"        data-felt="felt-light" onclick="setFelt('felt-light')"><span class="felt-swatch" style="background:#3a7a3a"></span>Light Green</div>
         <div class="felt-pill"        data-felt="felt-blue"  onclick="setFelt('felt-blue')"><span class="felt-swatch" style="background:#1e3a5a"></span>Blue</div>
         <div class="felt-pill"        data-felt="felt-brown" onclick="setFelt('felt-brown')"><span class="felt-swatch" style="background:#5a3a1a"></span>Brown</div>
-        <div class="felt-pill"        data-felt="felt-cyber" onclick="setFelt('felt-cyber')"><span class="felt-swatch" style="background:linear-gradient(135deg,#0a000f,#ff00c8)"></span>Cyberpunk</div>
-        <div class="felt-pill"        data-felt="felt-space" onclick="setFelt('felt-space')"><span class="felt-swatch" style="background:linear-gradient(135deg,#03001e,#7b2fbe)"></span>Space</div>
-        <div class="felt-pill"        data-felt="felt-water" onclick="setFelt('felt-water')"><span class="felt-swatch" style="background:linear-gradient(135deg,#001a3a,#006994)"></span>Ocean</div>
+        <div class="felt-pill"        data-felt="felt-cyber" onclick="setFelt('felt-cyber')"><span class="felt-swatch" style="background:linear-gradient(135deg,#0d0018,#ff1adc)"></span>Synthwave</div>
+        <div class="felt-pill"        data-felt="felt-space" onclick="setFelt('felt-space')"><span class="felt-swatch" style="background:linear-gradient(135deg,#020412,#ffffff)"></span>Space</div>
+        <div class="felt-pill"        data-felt="felt-water" onclick="setFelt('felt-water')"><span class="felt-swatch" style="background:linear-gradient(135deg,#000d1a,#00b4c8)"></span>Ocean</div>
       </div>
     </div>
     <div class="setting-group">
@@ -723,7 +593,7 @@ body.felt-water .board-scroll::after {
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.5
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.78
 </div>
 
 <script>
@@ -789,11 +659,298 @@ function buildPaletteGrid() {
   el('palette-host-note').textContent = (gState?.players?.[0]?.id === myId) ? '(host only)' : '(set by host)';
 }
 
+// ── Canvas background engine ─────────────────────────────────────────────
+(function(){
+  let rafId = null;
+
+  // ── SPACE starfield ──────────────────────────────────────────────────────
+  function runSpace(canvas) {
+    const ctx = canvas.getContext('2d');
+    const NUM = 260, SPEED = 1.8;
+    let stars = [], W, H;
+    function spawnStar(spread) {
+      return { x:(Math.random()-.5)*2000, y:(Math.random()-.5)*2000,
+               z:spread?Math.random()*1000:1000, pz:spread?Math.random()*1000:1000 };
+    }
+    function init() {
+      W = canvas.width  = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+      stars = Array.from({length:NUM},()=>spawnStar(true));
+      ctx.fillStyle='#020412'; ctx.fillRect(0,0,W,H);
+    }
+    init();
+    const ro = new ResizeObserver(init); ro.observe(canvas);
+    function frame() {
+      if (!canvas.isConnected) { ro.disconnect(); return; }
+      const cx=W/2, cy=H/2;
+      ctx.fillStyle='rgba(2,4,18,0.2)'; ctx.fillRect(0,0,W,H);
+      for (const s of stars) {
+        s.pz=s.z; s.z-=SPEED;
+        if (s.z<=1){ Object.assign(s,spawnStar(false)); continue; }
+        const sx=(s.x/s.z)*W+cx, sy=(s.y/s.z)*H+cy;
+        const px=(s.x/s.pz)*W+cx, py=(s.y/s.pz)*H+cy;
+        if (sx<-10||sx>W+10||sy<-10||sy>H+10) continue;
+        const prog=1-s.z/1000;
+        const size=Math.max(0.3,prog*2.2), alpha=Math.min(1,prog*1.6);
+        const dx=sx-px,dy=sy-py;
+        if (Math.sqrt(dx*dx+dy*dy)>0.8){
+          ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(sx,sy);
+          ctx.strokeStyle=`rgba(255,255,255,${alpha*0.35})`; ctx.lineWidth=size*0.4; ctx.stroke();
+        }
+        ctx.beginPath(); ctx.arc(sx,sy,size*0.55,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,255,255,${alpha})`; ctx.fill();
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  // ── OCEAN floor ──────────────────────────────────────────────────────────
+  function runOcean(canvas) {
+    const ctx = canvas.getContext('2d');
+    let W, H, bubbles=[], causticT=0, spawnTimer=0;
+    const rays = Array.from({length:6},(_,i)=>({
+      x:0, w:30+Math.random()*60, alpha:0.012+Math.random()*0.018,
+      pulse:Math.random()*Math.PI*2, speed:0.004+Math.random()*0.004
+    }));
+    function init() {
+      W = canvas.width  = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+      rays.forEach((r,i)=>{ r.x=(i/5)*W*1.1-W*0.05; });
+      bubbles=[];
+      for(let i=0;i<18;i++){const b=mkBubble();b.y=Math.random()*H;bubbles.push(b);}
+    }
+    function mkBubble(){
+      return{x:Math.random()*(W||400),y:(H||600)+20,r:2+Math.random()*10,
+             vy:0.4+Math.random()*0.7,vx:(Math.random()-.5)*0.4,
+             wobble:0,ws:0.02+Math.random()*0.02,wa:1.5+Math.random()*2,
+             alpha:0.3+Math.random()*0.35};
+    }
+    const ro = new ResizeObserver(init); ro.observe(canvas);
+    init();
+    function frame(){
+      if (!canvas.isConnected){ro.disconnect();return;}
+      // bg
+      const bg=ctx.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0,'#001824');bg.addColorStop(0.35,'#002535');
+      bg.addColorStop(0.7,'#002d3a');bg.addColorStop(1,'#001520');
+      ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+      // rays
+      rays.forEach(r=>{
+        r.pulse+=r.speed;
+        const a=r.alpha*(0.7+0.3*Math.sin(r.pulse));
+        const g=ctx.createLinearGradient(r.x,0,r.x,H*0.75);
+        g.addColorStop(0,`rgba(100,210,230,${a})`);
+        g.addColorStop(0.6,`rgba(60,160,200,${a*0.4})`);
+        g.addColorStop(1,'transparent');
+        ctx.beginPath();
+        ctx.moveTo(r.x-r.w/2,0);ctx.lineTo(r.x+r.w/2,0);
+        ctx.lineTo(r.x+r.w*1.8,H*0.75);ctx.lineTo(r.x-r.w*1.8,H*0.75);
+        ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+      });
+      // caustics
+      causticT+=0.008;
+      [{x:.15,y:.25},{x:.45,y:.12},{x:.72,y:.3},{x:.28,y:.55},{x:.60,y:.48},
+       {x:.85,y:.62},{x:.10,y:.72},{x:.50,y:.78},{x:.80,y:.15}].forEach((p,i)=>{
+        const px=p.x*W+Math.sin(causticT+i*1.1)*18;
+        const py=p.y*H+Math.cos(causticT+i*0.9)*14;
+        const r=40+Math.sin(causticT*0.7+i)*15;
+        const a=0.025+Math.sin(causticT+i*0.7)*0.012;
+        const g=ctx.createRadialGradient(px,py,0,px,py,r);
+        g.addColorStop(0,`rgba(100,220,210,${a})`);g.addColorStop(1,'transparent');
+        ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+      });
+      // spawn bubbles
+      spawnTimer++;
+      if(spawnTimer>40+Math.random()*80){
+        spawnTimer=0;
+        const cnt=Math.random()<0.25?2+Math.floor(Math.random()*3):1;
+        const cx2=Math.random()*W;
+        for(let i=0;i<cnt;i++){const b=mkBubble();b.x=cx2+(Math.random()-.5)*30;bubbles.push(b);}
+      }
+      for(let i=bubbles.length-1;i>=0;i--){
+        const b=bubbles[i];
+        b.wobble+=b.ws; b.x+=b.vx+Math.sin(b.wobble)*b.wa*0.15; b.y-=b.vy;
+        if(b.y<80) b.alpha-=0.008;
+        if(b.y<-b.r*2||b.alpha<=0){bubbles.splice(i,1);continue;}
+        // draw bubble
+        ctx.save();
+        ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+        const bg2=ctx.createRadialGradient(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.1,b.x,b.y,b.r);
+        bg2.addColorStop(0,`rgba(180,240,255,${b.alpha*0.5})`);
+        bg2.addColorStop(0.6,`rgba(100,200,220,${b.alpha*0.15})`);
+        bg2.addColorStop(1,`rgba(60,160,200,${b.alpha*0.05})`);
+        ctx.fillStyle=bg2;ctx.fill();
+        ctx.strokeStyle=`rgba(160,230,255,${b.alpha*0.7})`;ctx.lineWidth=0.8;ctx.stroke();
+        ctx.beginPath();ctx.arc(b.x-b.r*0.32,b.y-b.r*0.32,b.r*0.22,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,255,255,${b.alpha*0.55})`;ctx.fill();
+        ctx.restore();
+      }
+      rafId=requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  // ── SYNTHWAVE road ───────────────────────────────────────────────────────
+  function runSynthwave(canvas) {
+    const ctx = canvas.getContext('2d');
+    let W,H, gridOffset=0, streaks=[];
+    const GRID_COLOR='rgba(255,30,220,', GRID_SPEED=0.6;
+    const mtnBack  = buildMtn(1,28), mtnFront = buildMtn(2,22);
+    const stars = Array.from({length:180},()=>({x:Math.random(),y:Math.random()*0.48,r:0.4+Math.random()*1.2,a:0.4+Math.random()*0.6}));
+    function buildMtn(seed,count){
+      const pts=[];
+      const rng=s=>{let v=Math.sin(s*127.1+seed*311.7)*43758.5;return v-Math.floor(v);};
+      for(let i=0;i<=count;i++) pts.push({t:i/count,h:rng(i)});
+      return pts;
+    }
+    function init(){
+      W=canvas.width=canvas.offsetWidth; H=canvas.height=canvas.offsetHeight;
+      streaks=[];
+      for(let i=0;i<14;i++){const s=mkStreak();s.z=Math.random();streaks.push(s);}
+    }
+    function mkStreak(){
+      const side=Math.random()<.5?-1:1;
+      const cols=[{r:'255,30,220',w:2.5},{r:'0,200,255',w:1.5},{r:'255,255,255',w:1},{r:'255,80,180',w:2}];
+      const c=cols[Math.floor(Math.random()*cols.length)];
+      return{side,z:0,len:0.06+Math.random()*0.12,color:c.r,baseW:c.w,alpha:0.5+Math.random()*0.5};
+    }
+    function hy(){return H*0.52;}
+    function vx(){return W*0.5;}
+    function proj(nx,z){
+      const screenY=hy()+Math.pow(z,0.85)*(H-hy());
+      const screenX=vx()+nx*W*0.13*Math.pow(z,0.85)*2.6;
+      return{x:screenX,y:screenY};
+    }
+    function drawMtn(pts,hMin,hMax,yOff,col){
+      ctx.beginPath();ctx.moveTo(0,hy());
+      pts.forEach(p=>ctx.lineTo(p.t*W,hy()-(hMin+p.h*(hMax-hMin))*H-yOff*H));
+      ctx.lineTo(W,hy());ctx.closePath();ctx.fillStyle=col;ctx.fill();
+    }
+    const ro=new ResizeObserver(init);ro.observe(canvas);
+    init();
+    function frame(){
+      if(!canvas.isConnected){ro.disconnect();return;}
+      const HY=hy(),VX=vx();
+      // sky
+      const sg=ctx.createLinearGradient(0,0,0,HY);
+      sg.addColorStop(0,'#05000f');sg.addColorStop(0.55,'#0e0018');sg.addColorStop(1,'#200030');
+      ctx.fillStyle=sg;ctx.fillRect(0,0,W,HY);
+      // stars
+      stars.forEach(s=>{ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${s.a})`;ctx.fill();});
+      // sun glow
+      const sx=VX,sy=HY-H*0.05,sr=H*0.19;
+      const sg2=ctx.createRadialGradient(sx,sy,sr*0.5,sx,sy,sr*2.8);
+      sg2.addColorStop(0,'rgba(255,120,20,.18)');sg2.addColorStop(0.4,'rgba(255,60,120,.10)');sg2.addColorStop(1,'transparent');
+      ctx.fillStyle=sg2;ctx.fillRect(0,0,W,HY);
+      // sun body
+      ctx.save();ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.clip();
+      const sg3=ctx.createLinearGradient(sx,sy-sr,sx,sy+sr);
+      sg3.addColorStop(0,'#ffb030');sg3.addColorStop(0.35,'#ff6030');sg3.addColorStop(0.65,'#ff3080');sg3.addColorStop(1,'#cc10a0');
+      ctx.fillStyle=sg3;ctx.fillRect(sx-sr,sy-sr,sr*2,sr*2);
+      for(let i=0;i<10;i++){const t=i/10;ctx.fillStyle=`rgba(10,0,20,${0.55+t*0.35})`;ctx.fillRect(sx-sr,sy+t*sr*0.9,sr*2,(sr*0.9/10)*(0.3+t*0.5));}
+      ctx.restore();
+      // mountains
+      drawMtn(mtnBack, 0.04,0.14,0.01,'#0d0018');
+      drawMtn(mtnFront,0.03,0.10,0,   '#080010');
+      // horizon glow
+      const hg=ctx.createLinearGradient(0,HY-6,0,HY+18);
+      hg.addColorStop(0,'rgba(255,60,200,0)');hg.addColorStop(0.3,'rgba(255,60,200,.55)');
+      hg.addColorStop(0.7,'rgba(200,20,255,.3)');hg.addColorStop(1,'transparent');
+      ctx.fillStyle=hg;ctx.fillRect(0,HY-6,W,24);
+      // floor
+      const fg=ctx.createLinearGradient(0,HY,0,H);
+      fg.addColorStop(0,'#0d0018');fg.addColorStop(0.4,'#100015');fg.addColorStop(1,'#07000e');
+      ctx.fillStyle=fg;ctx.fillRect(0,HY,W,H-HY);
+      gridOffset=(gridOffset+GRID_SPEED)%(H/20);
+      ctx.save();ctx.beginPath();ctx.rect(0,HY,W,H-HY);ctx.clip();
+      // h-lines
+      for(let i=0;i<=22;i++){
+        const raw=i+gridOffset/(H/20),t=raw/20;
+        const pt=Math.pow(t,2.2),y=HY+pt*(H-HY)*1.05;
+        if(y>H+2)continue;
+        ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);
+        ctx.strokeStyle=`${GRID_COLOR}${0.15+pt*0.65})`;ctx.lineWidth=0.5+pt*1.5;ctx.stroke();
+      }
+      // v-lines
+      for(let i=0;i<=37;i++){
+        const t=(i/37)-.5,bx=W*.5+t*W*1.6;
+        const a=0.15+(1-Math.abs(t*1.6))*0.55;
+        if(a<0.05)continue;
+        ctx.beginPath();ctx.moveTo(VX,HY);ctx.lineTo(bx,H+10);
+        ctx.strokeStyle=`${GRID_COLOR}${Math.max(0,Math.min(1,a))})`;ctx.lineWidth=0.8+Math.abs(t)*0.5;ctx.stroke();
+      }
+      ctx.restore();
+      // reflection bloom
+      const rb=ctx.createLinearGradient(0,HY,0,HY+H*0.18);
+      rb.addColorStop(0,'rgba(255,40,200,.22)');rb.addColorStop(1,'transparent');
+      ctx.fillStyle=rb;ctx.fillRect(0,HY,W,H*0.18);
+      // road
+      const rL0=proj(-1,0),rR0=proj(1,0),rL1=proj(-1,1),rR1=proj(1,1);
+      const rg=ctx.createLinearGradient(0,HY,0,H);
+      rg.addColorStop(0,'rgba(8,0,18,.85)');rg.addColorStop(1,'rgba(12,0,22,.92)');
+      ctx.beginPath();ctx.moveTo(rL0.x,rL0.y);ctx.lineTo(rR0.x,rR0.y);ctx.lineTo(rR1.x,rR1.y);ctx.lineTo(rL1.x,rL1.y);ctx.closePath();
+      ctx.fillStyle=rg;ctx.fill();
+      [['rgba(0,220,255,.8)',1.5],['rgba(0,220,255,.2)',8]].forEach(([c,lw])=>{
+        ctx.beginPath();ctx.moveTo(rL0.x,rL0.y);ctx.lineTo(rL1.x,rL1.y);ctx.strokeStyle=c;ctx.lineWidth=lw;ctx.stroke();
+        ctx.beginPath();ctx.moveTo(rR0.x,rR0.y);ctx.lineTo(rR1.x,rR1.y);ctx.strokeStyle=c;ctx.lineWidth=lw;ctx.stroke();
+      });
+      // centre dashes
+      ctx.save();ctx.beginPath();ctx.moveTo(rL0.x,rL0.y);ctx.lineTo(rR0.x,rR0.y);ctx.lineTo(rR1.x,rR1.y);ctx.lineTo(rL1.x,rL1.y);ctx.closePath();ctx.clip();
+      for(let i=0;i<16;i++){
+        const rz=(i/16+(gridOffset*0.02))%1,ez=Math.min(1,rz+0.03);
+        const p0=proj(0,rz),p1=proj(0,ez);
+        const al=Math.pow(rz,.5)*.9,lw=0.8+rz*3;
+        ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);
+        ctx.strokeStyle=`rgba(255,30,220,${al*.3})`;ctx.lineWidth=lw*5;ctx.stroke();
+        ctx.strokeStyle=`rgba(255,180,240,${al})`;ctx.lineWidth=lw;ctx.stroke();
+      }
+      ctx.restore();
+      // streaks
+      ctx.save();ctx.beginPath();ctx.moveTo(rL0.x,rL0.y);ctx.lineTo(rR0.x,rR0.y);ctx.lineTo(rR1.x,rR1.y);ctx.lineTo(rL1.x,rL1.y);ctx.closePath();ctx.clip();
+      for(let i=streaks.length-1;i>=0;i--){
+        const s=streaks[i];s.z+=0.018;
+        if(s.z>1.1){streaks.splice(i,1);continue;}
+        const zF=Math.min(1,s.z),zB=Math.max(0.001,s.z-s.len);
+        const lo=s.side*0.48;
+        const p0=proj(lo,zB),p1=proj(lo,zF);
+        const al=s.alpha*Math.min(1,Math.pow(s.z,.4))*(s.z>.85?(1-(s.z-.85)/.25):1);
+        const lw=s.baseW*(0.3+s.z*1.4);
+        ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);
+        ctx.strokeStyle=`rgba(${s.color},${al*.3})`;ctx.lineWidth=lw*5;ctx.stroke();
+        ctx.strokeStyle=`rgba(${s.color},${al})`;ctx.lineWidth=lw;ctx.stroke();
+      }
+      if(streaks.length<18&&Math.random()<.06) streaks.push(mkStreak());
+      ctx.restore();
+      rafId=requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  // ── Public setFelt hook ──────────────────────────────────────────────────
+  window.startBgCanvas = function(felt) {
+    if (rafId) { cancelAnimationFrame(rafId); rafId=null; }
+    const canvas = document.getElementById('bg-canvas');
+    if (!canvas) return;
+    // Resize canvas to match its container
+    canvas.width  = canvas.offsetWidth  || canvas.parentElement.offsetWidth;
+    canvas.height = canvas.offsetHeight || canvas.parentElement.offsetHeight;
+    if      (felt === 'felt-space') runSpace(canvas);
+    else if (felt === 'felt-water') runOcean(canvas);
+    else if (felt === 'felt-cyber') runSynthwave(canvas);
+  };
+})();
+
 function setFelt(felt) {
   ['felt-dark','felt-light','felt-blue','felt-brown','felt-cyber','felt-space','felt-water'].forEach(f => document.body.classList.remove(f));
   document.body.classList.add(felt);
   currentFelt = felt;
   qsa('.felt-pill').forEach(p => p.classList.toggle('active', p.dataset.felt === felt));
+  // Start or stop canvas engine
+  if (['felt-cyber','felt-space','felt-water'].includes(felt)) {
+    // Small delay so CSS class is applied and canvas has dimensions
+    setTimeout(() => window.startBgCanvas(felt), 50);
+  }
 }
 
 const SIZES = { sm:['46px','62px','1.05rem'], md:['58px','76px','1.4rem'], lg:['72px','94px','1.7rem'] };
