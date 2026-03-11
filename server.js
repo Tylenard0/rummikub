@@ -37,8 +37,10 @@ const server = http.createServer((req, res) => {
 const { Server } = require('socket.io');
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
-  pingTimeout: 60000,
-  pingInterval: 25000,
+  pingTimeout: 120000,       // 2 min — tolerate slow mobile connections
+  pingInterval: 20000,       // ping every 20s
+  upgradeTimeout: 30000,
+  maxHttpBufferSize: 1e6,
 });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -234,6 +236,51 @@ function undoTurn(room, playerId) {
   return { ok: true };
 }
 
+// ─── Remove a player from a game (boot, quit, or disconnect handling) ─────────
+function removePlayer(room, idx) {
+  const player = room.players[idx];
+
+  if (room.phase === 'playing') {
+    // Return tiles to pool and shuffle
+    room.pool.push(...player.rack);
+    for (let i = room.pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [room.pool[i], room.pool[j]] = [room.pool[j], room.pool[i]];
+    }
+
+    const wasTheirTurn = room.currentPlayerIndex === idx;
+    room.players.splice(idx, 1);
+
+    if (room.players.length < 2) {
+      room.phase = 'ended';
+      room.winner = room.players[0]?.name || 'Nobody';
+      room.winnerScores = room.players.map(p => ({
+        name: p.name, avatarColor: p.avatarColor,
+        rackCount: p.rack.length, points: rackPoints(p.rack),
+      }));
+      room.log.push('Not enough players. Game over!');
+    } else {
+      if (wasTheirTurn) {
+        // Wrap index to stay in bounds — this player is now gone so the
+        // player at this index IS the next player already; just set snapshot.
+        room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
+        const next = room.players[room.currentPlayerIndex];
+        room.turnSnapshot = {
+          board: JSON.parse(JSON.stringify(room.board)),
+          rack:  JSON.parse(JSON.stringify(next.rack)),
+        };
+        room.log.push(`It's ${next.name}'s turn.`);
+      } else if (idx < room.currentPlayerIndex) {
+        // Removed player was before the current player — shift index back
+        room.currentPlayerIndex--;
+      }
+      // If idx > currentPlayerIndex: no change needed
+    }
+  } else {
+    room.players.splice(idx, 1);
+  }
+}
+
 function safeState(room, forPlayerId) {
   return {
     id: room.id, phase: room.phase,
@@ -319,17 +366,7 @@ io.on('connection', (socket) => {
 
   socket.on('draw_tile',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(drawTile(r, socket.id));          broadcastState(r); });
   socket.on('play_turn',   ({ board }, cb) => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(playTurn(r, socket.id, board));   broadcastState(r); });
-  socket.on('undo_turn',   (_, cb)        => {
-    const r = rooms[currentRoom];
-    if (!r) {
-      // Room not found — send a soft error without crashing
-      return cb?.({ error: 'Session expired — please rejoin or refresh.' });
-    }
-    const res = undoTurn(r, socket.id);
-    cb?.(res);
-    // Only emit back to this player so board resets for them
-    io.to(socket.id).emit('state', safeState(r, socket.id));
-  });
+  socket.on('undo_turn',   (_, cb)        => { const r = rooms[currentRoom]; if (!r) return cb?.({ error: 'Room not found' }); cb?.(undoTurn(r, socket.id)); io.to(socket.id).emit('state', safeState(r, socket.id)); });
   socket.on('request_state', ()           => { const r = rooms[currentRoom]; if (r) socket.emit('state', safeState(r, socket.id)); });
 
   socket.on('chat', ({ msg }) => {
@@ -358,38 +395,10 @@ io.on('connection', (socket) => {
     if (!room) return cb?.({ error: 'Room not found' });
     const idx = room.players.findIndex(p => p.id === socket.id);
     if (idx === -1) return cb?.({ error: 'Player not found' });
-    const player = room.players[idx];
-
-    if (room.phase === 'playing') {
-      // Return tiles to pool and shuffle
-      room.pool.push(...player.rack);
-      for (let i = room.pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [room.pool[i], room.pool[j]] = [room.pool[j], room.pool[i]];
-      }
-      room.log.push(`${player.name} left the game. Their tiles returned to the pool.`);
-
-      // If it was their turn, advance
-      const wasTheirTurn = room.players[room.currentPlayerIndex]?.id === socket.id;
-      room.players.splice(idx, 1);
-
-      if (room.players.length < 2) {
-        // Not enough players — end game
-        room.phase = 'ended';
-        room.winner = room.players[0]?.name || 'Nobody';
-        room.log.push(`Not enough players. Game over!`);
-      } else {
-        if (wasTheirTurn) {
-          room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
-          advanceTurn(room);
-        } else if (idx < room.currentPlayerIndex) {
-          room.currentPlayerIndex--;
-        }
-      }
-    } else {
-      room.players.splice(idx, 1);
-    }
-
+    const playerName = room.players[idx].name;
+    if (room.phase === 'playing')
+      room.log.push(`${playerName} left the game. Their tiles returned to the pool.`);
+    removePlayer(room, idx);
     socket.leave(currentRoom);
     cb?.({ ok: true });
     broadcastState(room);
@@ -400,42 +409,46 @@ io.on('connection', (socket) => {
     if (!room) return cb?.({ error: 'Room not found' });
     if (room.players[0]?.id !== socket.id) return cb?.({ error: 'Only the host can boot players' });
     if (socket.id === targetId) return cb?.({ error: 'Cannot boot yourself' });
-
     const idx = room.players.findIndex(p => p.id === targetId);
     if (idx === -1) return cb?.({ error: 'Player not found' });
-    const player = room.players[idx];
-
-    // Return their tiles to pool if game is active
-    if (room.phase === 'playing') {
-      room.pool.push(...player.rack);
-      for (let i = room.pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [room.pool[i], room.pool[j]] = [room.pool[j], room.pool[i]];
-      }
-      room.log.push(`🚫 ${player.name} was booted. Their tiles returned to the pool.`);
-      const wasTheirTurn = room.players[room.currentPlayerIndex]?.id === targetId;
-      room.players.splice(idx, 1);
-      if (room.players.length < 2) {
-        room.phase = 'ended';
-        room.winner = room.players[0]?.name || 'Nobody';
-        room.log.push('Not enough players. Game over!');
-      } else {
-        if (wasTheirTurn) {
-          room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
-          advanceTurn(room);
-        } else if (idx < room.currentPlayerIndex) {
-          room.currentPlayerIndex--;
-        }
-      }
-    } else {
-      room.players.splice(idx, 1);
-      room.log.push(`🚫 ${player.name} was removed from the lobby.`);
-    }
-
-    // Notify booted player
+    const playerName = room.players[idx].name;
+    if (room.phase === 'playing')
+      room.log.push(`🚫 ${playerName} was booted. Their tiles returned to the pool.`);
+    else
+      room.log.push(`🚫 ${playerName} was removed from the lobby.`);
+    removePlayer(room, idx);
     io.to(targetId).emit('booted', { msg: 'You were removed from the game by the host.' });
     cb?.({ ok: true });
     broadcastState(room);
+  });
+
+  // ── Reconnect: player rejoins with their saved name + roomId after disconnect ──
+  socket.on('rejoin_room', ({ roomId, name, avatarColor }, cb) => {
+    const room = rooms[roomId?.toUpperCase()];
+    if (!room) return cb?.({ error: 'Room not found or expired' });
+    if (room.phase === 'ended') return cb?.({ error: 'Game has ended' });
+
+    const existing = room.players.find(p => p.name === name?.trim());
+    if (existing) {
+      // Swap socket ID to the new connection
+      existing.id = socket.id;
+      if (avatarColor) existing.avatarColor = avatarColor;
+      socket.join(roomId.toUpperCase());
+      currentRoom = roomId.toUpperCase();
+      cb?.({ ok: true, roomId: currentRoom, rejoined: true });
+      room.log.push(`🔄 ${name} reconnected.`);
+      broadcastState(room);
+    } else if (room.phase === 'lobby' && room.players.length < MAX_PLAYERS) {
+      // Name not found but lobby still open — treat as fresh join
+      const autoColor = AVATAR_COLORS[room.players.length % AVATAR_COLORS.length];
+      room.players.push({ id: socket.id, name: name.trim(), avatarColor: avatarColor || autoColor, rack: [], hasInitialMeld: false });
+      socket.join(roomId.toUpperCase());
+      currentRoom = roomId.toUpperCase();
+      cb?.({ ok: true, roomId: currentRoom, rejoined: false });
+      broadcastState(room);
+    } else {
+      cb?.({ error: 'Could not rejoin — game in progress and name not recognised' });
+    }
   });
 
   socket.on('disconnect', () => {
@@ -445,9 +458,13 @@ io.on('connection', (socket) => {
     const idx = room.players.findIndex(p => p.id === socket.id);
     if (idx === -1) return;
     const name = room.players[idx].name;
-    if (room.phase === 'lobby') room.players.splice(idx, 1);
-    else room.log.push(`⚡ ${name} disconnected.`);
-    io.to(currentRoom).emit('state', safeState(room, null));
+    if (room.phase === 'lobby') {
+      room.players.splice(idx, 1);
+    } else {
+      // In-game: keep the player's seat & tiles for reconnect, just note it
+      room.log.push(`⚡ ${name} disconnected — waiting for them to reconnect.`);
+    }
+    broadcastState(room);
   });
 });
 
