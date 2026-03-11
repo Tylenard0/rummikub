@@ -378,6 +378,19 @@ io.on('connection', (socket) => {
     broadcastState(room);
   });
 
+  socket.on('reaction', ({ emoji }) => {
+    const room = rooms[currentRoom];
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    const allowed = ['👏','🔥','😬','🤔','😂','💀'];
+    if (!allowed.includes(emoji)) return;
+    // Broadcast reaction to all OTHER players (sender handles locally)
+    for (const p of room.players) {
+      if (p.id !== socket.id)
+        io.to(p.id).emit('reaction', { emoji, name: player.name });
+    }
+  });
 
   socket.on('set_palette', ({ palette }, cb) => {
     const room = rooms[currentRoom];
