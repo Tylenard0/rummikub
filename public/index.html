@@ -389,6 +389,37 @@ body.felt-water .board-area { position:relative;z-index:1; }
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(200,153,58,.22);border-radius:2px}
+
+/* ── Page load animation ── */
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(22px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+#lobby .logo-wrap    { animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) both; animation-delay:.05s; }
+#lobby .card         { animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) both; animation-delay:.18s; }
+#lobby .leaderboard  { animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) both; animation-delay:.30s; }
+#lobby .lobby-instructions-link { animation:fadeSlideUp .55s cubic-bezier(.22,1,.36,1) both; animation-delay:.40s; }
+
+/* ── Instructions link ── */
+.lobby-instructions-link {
+  display:inline-flex;align-items:center;gap:.4rem;
+  color:var(--muted);font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;
+  text-decoration:none;padding:.4rem .9rem;
+  border:1px solid rgba(200,153,58,.18);border-radius:20px;
+  background:rgba(200,153,58,.05);transition:all .2s;
+}
+.lobby-instructions-link:hover { color:var(--gold2);border-color:var(--gold);background:rgba(200,153,58,.12); }
+
+/* ── Instructions button in settings ── */
+.btn-instructions {
+  width:100%;padding:.75rem;background:rgba(200,153,58,.08);
+  border:1px solid rgba(200,153,58,.25);border-radius:10px;
+  color:var(--gold);font-family:'DM Sans',sans-serif;font-size:.88rem;
+  font-weight:700;cursor:pointer;transition:all .15s;text-decoration:none;
+  display:flex;align-items:center;justify-content:center;gap:.4rem;letter-spacing:.03em;
+}
+.btn-instructions:hover { background:rgba(200,153,58,.15);border-color:var(--gold2); }
+.btn-instructions:active { transform:scale(.97); }
 @media(min-width:768px){:root{--tile-w:62px;--tile-h:82px}.tile{font-size:1.5rem}}
 @media(max-width:380px){:root{--tile-w:46px;--tile-h:62px}.tile{font-size:1.05rem}}
 </style>
@@ -405,7 +436,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
   <div class="card">
     <div class="card-title">Set Up Your Player</div>
     <div class="field"><label>Your Name</label><input type="text" id="inp-name" placeholder="e.g. Lois" maxlength="16" autocomplete="off" autocorrect="off" spellcheck="false"></div>
-    <div class="field"><label>Pick Your Colour</label><div class="avatar-row" id="avatar-row"></div></div>
+    <div class="field"><label>Pick Your Color</label><div class="avatar-row" id="avatar-row"></div></div>
     <button class="btn btn-gold" onclick="createRoom()">✦ Create New Room</button>
     <div class="divider">or join existing</div>
     <div class="field"><label>Room Code</label><input type="text" id="inp-code" placeholder="5-letter code" maxlength="5" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"></div>
@@ -417,6 +448,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
     <div class="lb-empty" id="lb-empty">No games played yet — be the first to win!</div>
     <ul class="lb-list" id="lb-list" style="display:none"></ul>
   </div>
+  <a href="https://instructions.tylenardo.com/" target="_blank" rel="noopener" class="lobby-instructions-link">📖 How to Play</a>
 </div>
 
 <!-- WAITING -->
@@ -521,7 +553,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
       <div class="palette-grid" id="palette-grid"></div>
     </div>
     <div class="setting-group">
-      <div class="setting-group-label">🟩 Board Colour</div>
+      <div class="setting-group-label">🟩 Board Color</div>
       <div class="felt-pills">
         <div class="felt-pill active" data-felt="felt-dark"  onclick="setFelt('felt-dark')"><span class="felt-swatch" style="background:#1e3a1e"></span>Dark Green</div>
         <div class="felt-pill"        data-felt="felt-light" onclick="setFelt('felt-light')"><span class="felt-swatch" style="background:#3a7a3a"></span>Light Green</div>
@@ -549,6 +581,9 @@ body.felt-water .board-area { position:relative;z-index:1; }
     </div>
     <div class="danger-zone">
       <button class="btn-quit" onclick="confirmQuit()">🚪 Quit Game</button>
+    </div>
+    <div style="padding-top:.5rem">
+      <a href="https://instructions.tylenardo.com/" target="_blank" rel="noopener" class="btn-instructions">📖 How to Play</a>
     </div>
   </div>
 </div>
@@ -593,7 +628,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.88
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.89
 </div>
 
 <script>
