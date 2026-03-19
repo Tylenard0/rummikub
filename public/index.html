@@ -422,6 +422,29 @@ body.felt-water .board-area { position:relative;z-index:1; }
 .btn-instructions:active { transform:scale(.97); }
 @media(min-width:768px){:root{--tile-w:62px;--tile-h:82px}.tile{font-size:1.5rem}}
 @media(max-width:380px){:root{--tile-w:46px;--tile-h:62px}.tile{font-size:1.05rem}}
+
+/* ── Bot controls ── */
+.bot-controls{display:flex;flex-direction:column;gap:.55rem;width:100%;max-width:380px}
+.bot-diff-row{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+.bot-diff-label{font-size:.7rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.diff-pills{display:flex;gap:.3rem;flex:1}
+.diff-pill{flex:1;padding:.38rem .5rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;border:1.5px solid transparent;text-align:center;-webkit-appearance:none;background:rgba(255,255,255,.05);color:var(--muted)}
+.diff-pill:active{transform:scale(.94)}
+.diff-pill[data-diff="easy"].selected{background:rgba(80,200,120,.18);border-color:#50c878;color:#50c878}
+.diff-pill[data-diff="medium"].selected{background:rgba(200,153,58,.18);border-color:var(--gold);color:var(--gold2)}
+.diff-pill[data-diff="hard"].selected{background:rgba(220,60,60,.18);border-color:#e05050;color:#f07070}
+.diff-pill:not(.selected):hover{background:rgba(255,255,255,.1);color:var(--text)}
+.bot-action-row{display:flex;gap:.5rem}
+.btn-bot{flex:1;padding:.6rem .9rem;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;border:1px solid rgba(200,153,58,.25);-webkit-appearance:none}
+.btn-bot:active{transform:scale(.95)}
+.btn-add-bot{background:rgba(200,153,58,.12);color:var(--gold)}
+.btn-add-bot:hover{background:rgba(200,153,58,.22);border-color:var(--gold)}
+.btn-rem-bot{background:rgba(255,255,255,.05);color:var(--muted)}
+.btn-rem-bot:hover{background:rgba(255,255,255,.1)}
+.p-bot-badge{margin-left:auto;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;border-radius:12px;padding:.1rem .45rem;border:1px solid}
+.p-bot-badge.diff-easy  {color:#50c878;background:rgba(80,200,120,.12);border-color:rgba(80,200,120,.3)}
+.p-bot-badge.diff-medium{color:#c8993a;background:rgba(200,153,58,.12);border-color:rgba(200,153,58,.3)}
+.p-bot-badge.diff-hard  {color:#f07070;background:rgba(220,60,60,.12); border-color:rgba(220,60,60,.3)}
 </style>
 </head>
 <body>
@@ -628,7 +651,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v6.89
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v7.00
 </div>
 
 <script>
@@ -1060,6 +1083,43 @@ function playSound(type) {
         g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+i*.1+.2);
         o.start(ctx.currentTime+i*.1); o.stop(ctx.currentTime+i*.1+.25);
       });
+    } else if (type === 'your_turn') {
+      // Two-note gentle chime: low → high, like a notification bell
+      [[440, 0], [660, 0.18]].forEach(([freq, delay]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        g.gain.setValueAtTime(0, ctx.currentTime + delay);
+        g.gain.linearRampToValueAtTime(.13, ctx.currentTime + delay + .01);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + delay + .28);
+        o.start(ctx.currentTime + delay);
+        o.stop(ctx.currentTime + delay + .3);
+      });
+    } else if (type === 'opponent_play') {
+      // Soft muted thud — someone placed tiles
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + .12);
+      gain.gain.setValueAtTime(.09, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .18);
+      osc.start(); osc.stop(ctx.currentTime + .2);
+    } else if (type === 'opponent_draw') {
+      // Short descending blip — someone drew from the pool
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + .1);
+      gain.gain.setValueAtTime(.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .12);
+      osc.start(); osc.stop(ctx.currentTime + .14);
+    } else if (type === 'invalid') {
+      // Low buzzy rejection tone
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(140, ctx.currentTime);
+      osc.frequency.setValueAtTime(120, ctx.currentTime + .07);
+      gain.gain.setValueAtTime(.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .18);
+      osc.start(); osc.stop(ctx.currentTime + .2);
     }
   } catch(e) {}
 }
@@ -1123,7 +1183,7 @@ function renderLeaderboard() {
 let turnTimerInterval = null;
 let turnTimerSeconds  = 0;
 
-function startTurnTimer(seconds) {
+function startTurnTimer(seconds, startFrom) {
   clearTurnTimer();
   if (!seconds || seconds <= 0) return;
   turnTimerSeconds = seconds;
@@ -1132,7 +1192,7 @@ function startTurnTimer(seconds) {
   const label = el('turn-timer-label');
   bar.style.display   = 'block';
   label.style.display = 'block';
-  let remaining = seconds;
+  let remaining = (startFrom !== undefined) ? startFrom : seconds;
   function tick() {
     const pct = (remaining / seconds) * 100;
     fill.style.width = pct + '%';
@@ -1252,12 +1312,51 @@ let amHost         = false;
 let workingBoard   = [];
 let multiSelected  = [];
 let sortMode       = 'color';
+let localRack      = [];   // preserves the player's own tile order across state updates
 
 socket.on('state', state => {
   const wasMyTurn  = isMyTurn;
+  const prevBoard  = gState?.board;
+  const prevPool   = gState?.pool;
   const nowMyTurn  = state.players[state.currentPlayerIndex]?.id === myId;
   if (nowMyTurn && !wasMyTurn) { workingBoard = clone(state.board); multiSelected = []; }
   if (!nowMyTurn)               { workingBoard = clone(state.board); }
+
+  // ── Turn-change sounds (only fire after the first state, while in-game) ──
+  if (gState && state.phase === 'playing') {
+    if (nowMyTurn && !wasMyTurn) {
+      // It just became our turn
+      playSound('your_turn');
+    } else if (!nowMyTurn && wasMyTurn === false && state.currentPlayerIndex !== gState.currentPlayerIndex) {
+      // An opponent's turn just advanced — work out what they did
+      const poolShrank = (state.pool < prevPool);
+      const boardGrew  = (state.board.flat().length > (prevBoard||[]).flat().length);
+      if (boardGrew)   playSound('opponent_play');
+      else if (poolShrank) playSound('opponent_draw');
+    }
+  }
+
+  // Keep local rack order — only resync when the set of tile IDs changes
+  const serverRack = state.players.find(p => p.id === myId)?.rack;
+  if (serverRack) {
+    const serverIds = serverRack.map(t => t.id).sort().join(',');
+    const localIds  = localRack.map(t => t.id).sort().join(',');
+    if (serverIds !== localIds) {
+      // Tiles were added or removed — rebuild localRack preserving existing order
+      const serverMap = new Map(serverRack.map(t => [t.id, t]));
+      // Keep tiles that are still in the server rack, in their current local order
+      const kept = localRack.filter(t => serverMap.has(t.id)).map(t => serverMap.get(t.id));
+      const keptIds = new Set(kept.map(t => t.id));
+      // Append any brand-new tiles (e.g. drawn tile) at the end
+      const added = serverRack.filter(t => !keptIds.has(t.id));
+      localRack = [...kept, ...added];
+    }
+    // Always update tile objects in-place so rack reflects latest state
+    if (state.players.find(p => p.id === myId)) {
+      state.players.find(p => p.id === myId).rack = localRack;
+    }
+  }
+
   gState    = state;
   isMyTurn  = nowMyTurn;
   amHost    = state.players[0]?.id === myId;
@@ -1305,6 +1404,21 @@ function joinRoom() {
 function startGame() {
   socket.emit('start_game', {}, r => { if (r?.error) errMsg('wait-err', r.error); });
 }
+let selectedBotDifficulty = 'medium';
+
+function setDifficulty(diff) {
+  selectedBotDifficulty = diff;
+  document.querySelectorAll('.diff-pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.diff === diff);
+  });
+}
+
+function addBot() {
+  socket.emit('add_bot', { difficulty: selectedBotDifficulty }, r => { if (r?.error) toast(r.error, 'err'); });
+}
+function removeBot() {
+  socket.emit('remove_bot', {}, r => { if (r?.error) toast(r.error, 'err'); });
+}
 
 // ─── House Rules ──────────────────────────────────────────────────────────────
 let rulesOpen = false;
@@ -1328,8 +1442,13 @@ function renderWaiting(state) {
   (state.players||[]).forEach((p,i) => {
     const li = document.createElement('li');
     li.style.cssText = 'display:flex;align-items:center;gap:.5rem';
-    li.innerHTML = `<span class="p-avatar" style="background:${p.avatarColor}">${p.name.slice(0,2).toUpperCase()}</span>${p.name}${p.id===myId?' (you)':''}${i===0?'<span class="p-host">HOST</span>':''}`;
-    if (isHost && p.id !== myId) {
+    const nameLabel = p.isBot ? p.name : `${p.name}${p.id===myId?' (you)':''}`;
+    li.innerHTML = `<span class="p-avatar" style="background:${p.avatarColor}">${p.isBot ? '🤖' : p.name.slice(0,2).toUpperCase()}</span>${nameLabel}${i===0?'<span class="p-host">HOST</span>':''}`;
+    if (p.isBot) {
+      const diff = p.difficulty || 'medium';
+      const diffLabel = { easy: '😊 Easy', medium: '🤖 Medium', hard: '😈 Hard' }[diff] || diff;
+      li.innerHTML += `<span class="p-bot-badge diff-${diff}">${diffLabel}</span>`;
+    } else if (isHost && p.id !== myId) {
       const btn = document.createElement('button');
       btn.className = 'boot-btn'; btn.textContent = 'Boot';
       btn.onclick = () => bootPlayer(p.id);
@@ -1337,6 +1456,37 @@ function renderWaiting(state) {
     }
     list.appendChild(li);
   });
+
+  // Bot add/remove buttons (host only, lobby only)
+  let botControls = el('bot-controls');
+  if (!botControls) {
+    botControls = document.createElement('div');
+    botControls.id = 'bot-controls';
+    botControls.className = 'bot-controls';
+    list.parentNode.insertBefore(botControls, list.nextSibling);
+  }
+  if (isHost) {
+    const botCount = (state.players||[]).filter(p => p.isBot).length;
+    const canAdd   = state.players.length < 6;
+    const canRem   = botCount > 0;
+    botControls.style.display = 'flex';
+    botControls.innerHTML = `
+      <div class="bot-diff-row">
+        <span class="bot-diff-label">CPU Level</span>
+        <div class="diff-pills">
+          <button class="diff-pill${selectedBotDifficulty==='easy'?' selected':''}"   data-diff="easy"   onclick="setDifficulty('easy')">😊 Easy</button>
+          <button class="diff-pill${selectedBotDifficulty==='medium'?' selected':''}" data-diff="medium" onclick="setDifficulty('medium')">🤖 Medium</button>
+          <button class="diff-pill${selectedBotDifficulty==='hard'?' selected':''}"   data-diff="hard"   onclick="setDifficulty('hard')">😈 Hard</button>
+        </div>
+      </div>
+      <div class="bot-action-row">
+        <button class="btn-bot btn-add-bot" ${canAdd?'':'disabled style="opacity:.4;cursor:default"'} onclick="addBot()">+ Add CPU Player</button>
+        <button class="btn-bot btn-rem-bot" ${canRem?'':'disabled style="opacity:.4;cursor:default"'} onclick="removeBot()">✕ Remove CPU</button>
+      </div>
+    `;
+  } else {
+    botControls.style.display = 'none';
+  }
 
   el('rules-panel').style.display   = isHost ? 'block' : 'none';
   el('rules-summary').style.display = !isHost ? 'block' : 'none';
@@ -1353,7 +1503,8 @@ function renderWaiting(state) {
     if (tTimer > 0) parts.push(tTimer + 's timer');
     el('rules-summary-text').textContent = parts.length ? parts.join(' · ') : 'Standard';
   }
-  el('start-btn').style.display = isHost && (state.players?.length >= 2) ? 'block' : 'none';
+  const canStart = isHost && state.players?.length >= 2;
+  el('start-btn').style.display = canStart ? 'block' : 'none';
 }
 
 // ─── Game render ──────────────────────────────────────────────────────────────
@@ -1366,7 +1517,7 @@ function renderGame(state) {
   state.players.forEach((p,i) => {
     const c = document.createElement('div');
     c.className = 'p-chip'+(i===state.currentPlayerIndex?' active':'')+(p.id===myId?' you':'');
-    c.innerHTML = `<span class="p-chip-dot" style="background:${p.avatarColor}"></span>${p.name} <b>${p.rackCount}</b>`;
+    c.innerHTML = `<span class="p-chip-dot" style="background:${p.avatarColor}"></span>${p.isBot?'🤖 ':''}${p.name} <b>${p.rackCount}</b>`;
     if (isHostGame && p.id !== myId) {
       const x = document.createElement('span');
       x.textContent = '✕'; x.title = 'Boot player';
@@ -1385,20 +1536,22 @@ function renderGame(state) {
   if (showMeld) el('meld-note').textContent = `⚡ First meld ≥ ${state.rules.initialMeldMin} pts`;
   renderBoard(isMyTurn ? workingBoard : state.board);
   if (me?.rack) renderRack(me.rack);
-  // Turn timer — restart on each state update when it's your turn
+  // Turn timer — use server-stamped turnStartedAt so the countdown is always
+  // in sync with the server, even after reconnects or mid-game joins.
   const timerSecs = state.rules?.turnTimer || 0;
-  if (timerSecs > 0 && state.phase === 'playing') {
-    if (isMyTurn) {
-      // Only restart timer if the current player changed
-      const turnKey = state.currentPlayerIndex + '-' + (state.log?.length ?? 0);
-      if (window._lastTimerTurnKey !== turnKey) {
-        window._lastTimerTurnKey = turnKey;
-        startTurnTimer(timerSecs);
+  if (timerSecs > 0 && state.phase === 'playing' && state.turnStartedAt) {
+    const turnKey = state.currentPlayerIndex + '-' + state.turnStartedAt;
+    if (window._lastTimerTurnKey !== turnKey) {
+      window._lastTimerTurnKey = turnKey;
+      if (isMyTurn) {
+        const elapsed = Math.floor((Date.now() - state.turnStartedAt) / 1000);
+        const remaining = Math.max(0, timerSecs - elapsed);
+        startTurnTimer(timerSecs, remaining);
+      } else {
+        clearTurnTimer();
       }
-    } else {
-      clearTurnTimer();
     }
-  } else {
+  } else if (!timerSecs || state.phase !== 'playing') {
     clearTurnTimer();
   }
   const chatLog = el('chat-log');
@@ -1473,6 +1626,7 @@ function renderRack(rack) {
       if (!me) return;
       const moved = me.rack.splice(fromIdx, 1)[0];
       me.rack.splice(ti, 0, moved);
+      localRack = [...me.rack];
       renderRack(me.rack);
     });
     rt.appendChild(t);
@@ -1618,15 +1772,51 @@ function rerender() {
 }
 
 // ─── Game actions ─────────────────────────────────────────────────────────────
+// ─── Set sorting (mirrors server logic) ──────────────────────────────────────
+function sortSetClient(tiles) {
+  const nj     = tiles.filter(t => !t.isJoker);
+  const jokers = tiles.filter(t =>  t.isJoker);
+  if (!nj.length) return tiles;
+  const colorOrder = ['red','blue','orange','black'];
+  const allSameColor = nj.every(t => t.color === nj[0].color);
+  if (allSameColor) {
+    // Run: sort by number, slot jokers into gaps
+    const sorted = nj.slice().sort((a, b) => a.num - b.num);
+    const result = [...sorted];
+    let jLeft = jokers.length;
+    for (let i = result.length - 1; i > 0 && jLeft > 0; i--) {
+      const gap = result[i].num - result[i - 1].num - 1;
+      for (let g = 0; g < gap && jLeft > 0; g++) {
+        result.splice(i, 0, jokers[jokers.length - jLeft]);
+        jLeft--;
+        i++;
+      }
+    }
+    while (jLeft > 0) {
+      const last = result.filter(t => !t.isJoker).at(-1);
+      if (last && last.num < 13) result.push(jokers[jokers.length - jLeft]);
+      else result.unshift(jokers[jokers.length - jLeft]);
+      jLeft--;
+    }
+    return result;
+  } else {
+    // Group: sort by color order, jokers at end
+    return [...nj.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color)), ...jokers];
+  }
+}
+
 function submitPlay() {
   if (!isMyTurn) return toast('Not your turn','err');
-  const board = workingBoard.filter(s=>s&&s.length>0);
+  // Sort each set before validating and sending
+  const board = workingBoard.filter(s=>s&&s.length>0).map(s => sortSetClient(s));
+  workingBoard = board;
   for (const s of board) {
-    if (s.length<3) return toast(`A set needs at least 3 tiles (you have one with ${s.length})`, 'err');
-    if (!validSetClient(s)) return toast('Fix invalid sets first!','err');
+    if (s.length<3) { playSound('invalid'); return toast(`A set needs at least 3 tiles (you have one with ${s.length})`, 'err'); }
+    if (!validSetClient(s)) { playSound('invalid'); return toast('Fix invalid sets first!','err'); }
   }
+  renderBoard(workingBoard);
   socket.emit('play_turn', {board}, r => {
-    if (r.error) { toast(r.error,'err'); socket.emit('request_state'); }
+    if (r.error) { playSound('invalid'); toast(r.error,'err'); socket.emit('request_state'); }
     else { playSound('play'); toast('Tiles played!','ok'); workingBoard=[]; multiSelected=[]; updateSelTray(); }
   });
 }
@@ -1654,6 +1844,7 @@ function sortRack() {
   const order=['red','blue','orange','black','joker'];
   if (sortMode==='color') me.rack.sort((a,b)=>order.indexOf(a.color)-order.indexOf(b.color)||a.num-b.num);
   else me.rack.sort((a,b)=>a.num-b.num||order.indexOf(a.color)-order.indexOf(b.color));
+  localRack = [...me.rack];
   renderRack(me.rack);
 }
 function requestRematch() {

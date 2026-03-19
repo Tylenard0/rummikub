@@ -59,6 +59,329 @@ const MIN_PLAYERS      = 2;
 const DEFAULT_RULES    = { initialMeldMin: 30, turnTimer: 0 };
 const AVATAR_COLORS    = ['#e05050','#4a90d9','#e07820','#50c878','#9b59b6','#e8c84a'];
 
+// ─── Bot helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Three difficulty tiers. Each tier builds on the previous one:
+ *
+ *  easy   – picks the FIRST valid meld found (no optimisation); never
+ *            extends existing board sets; draws immediately when stuck.
+ *            Thinks for 2.5 s so it feels human-slow.
+ *
+ *  medium – greedy: plays the meld that uses the most tiles, then most
+ *            points. Extends board runs/groups with rack tiles.
+ *            Thinks for 1.5 s.
+ *
+ *  hard   – strategic: plays the meld that leaves the lowest-value tiles
+ *            on the rack (minimises points held = minimises loss penalty);
+ *            extends board sets; will split existing board sets to create
+ *            new plays; and draws only when truly stuck.
+ *            Thinks for 0.8 s so it feels snappy and confident.
+ */
+const BOT_DIFFICULTY = { easy: 'easy', medium: 'medium', hard: 'hard' };
+
+const BOT_NAMES_BY_DIFF = {
+  easy:   ['😊 Robby', '😊 Byte',  '😊 Chip',  '😊 Pixel',  '😊 Glitch'],
+  medium: ['🤖 Robby', '🤖 Byte',  '🤖 Chip',  '🤖 Pixel',  '🤖 Glitch'],
+  hard:   ['😈 Robby', '😈 Byte',  '😈 Chip',  '😈 Pixel',  '😈 Glitch'],
+};
+const BOT_COLORS  = ['#7f8c8d','#27ae60','#8e44ad','#16a085','#d35400'];
+/** Delay (ms) before a bot acts — varies by difficulty for feel. */
+const BOT_THINK_MS = { easy: 2500, medium: 1500, hard: 800 };
+
+let botCounter = 0;
+function makeBotId() { return `bot_${Date.now()}_${botCounter++}`; }
+
+// ── Meld finders ──────────────────────────────────────────────────────────────
+
+/** Find every valid 3+-tile meld that can be formed purely from `tiles`. */
+function findMeldsFromTiles(tiles) {
+  const results = [];
+
+  // Groups: same number, different colours, 3–4 tiles
+  const byNum = {};
+  for (const t of tiles) {
+    if (t.isJoker) continue;
+    (byNum[t.num] = byNum[t.num] || []).push(t);
+  }
+  const jokers = tiles.filter(t => t.isJoker);
+
+  for (const [, group] of Object.entries(byNum)) {
+    const byColor = {};
+    for (const t of group) byColor[t.color] = t;
+    const uniq = Object.values(byColor);
+    for (let sz = 3; sz <= 4; sz++) {
+      if (uniq.length >= sz)
+        results.push(uniq.slice(0, sz));
+      if (uniq.length + jokers.length >= sz && uniq.length < sz)
+        results.push([...uniq, ...jokers.slice(0, sz - uniq.length)]);
+    }
+  }
+
+  // Runs: same colour, consecutive numbers
+  const byColor = {};
+  for (const t of tiles) {
+    if (t.isJoker) continue;
+    (byColor[t.color] = byColor[t.color] || []).push(t);
+  }
+  for (const [, colorTiles] of Object.entries(byColor)) {
+    const sorted = colorTiles.slice().sort((a, b) => a.num - b.num);
+    for (let i = 0; i < sorted.length; i++) {
+      let run = [sorted[i]];
+      for (let j = i + 1; j < sorted.length; j++) {
+        const last = run[run.length - 1];
+        const gap  = sorted[j].num - last.num;
+        if (gap === 1) {
+          run.push(sorted[j]);
+        } else if (gap === 2 && jokers.length > 0) {
+          run.push(jokers[0], sorted[j]);
+        } else break;
+        if (run.length >= 3) results.push([...run]);
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Try to extend existing board sets with tiles from `rack`.
+ * Returns an array of { newBoard, usedTileIds } candidates.
+ * Used by medium and hard bots.
+ */
+function findBoardExtensions(rack, board) {
+  const candidates = [];
+  const rackById = new Map(rack.map(t => [t.id, t]));
+
+  for (let si = 0; si < board.length; si++) {
+    const set = board[si];
+    const nj  = set.filter(t => !t.isJoker);
+    if (!nj.length) continue;
+
+    // --- Try extending a run on either end ---
+    const allSameColor = nj.every(t => t.color === nj[0].color);
+    if (allSameColor) {
+      const nums = set.filter(t => !t.isJoker).map(t => t.num).sort((a, b) => a - b);
+      const minN = nums[0], maxN = nums[nums.length - 1];
+      for (const t of rack) {
+        if (t.isJoker || t.color !== nj[0].color) continue;
+        const extended = (t.num === minN - 1) ? [t, ...set] : (t.num === maxN + 1) ? [...set, t] : null;
+        if (!extended) continue;
+        if (!isValidSet(extended)) continue;
+        const newBoard = board.map((s, i) => i === si ? extended : s);
+        candidates.push({ newBoard, usedTileIds: new Set([t.id]) });
+      }
+    }
+
+    // --- Try extending a group (add a 4th tile of the same number) ---
+    if (!allSameColor && set.length === 3) {
+      const num = nj[0].num;
+      const usedColors = new Set(nj.map(t => t.color));
+      for (const t of rack) {
+        if (t.isJoker || t.num !== num || usedColors.has(t.color)) continue;
+        const extended = [...set, t];
+        if (!isValidSet(extended)) continue;
+        const newBoard = board.map((s, i) => i === si ? extended : s);
+        candidates.push({ newBoard, usedTileIds: new Set([t.id]) });
+      }
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * Hard-mode only: try splitting an existing board run to free a tile slot
+ * that allows a rack tile to complete a new meld.
+ * Returns an array of { newBoard, usedTileIds } candidates.
+ */
+function findSplitPlays(rack, board) {
+  const candidates = [];
+
+  for (let si = 0; si < board.length; si++) {
+    const set = board[si];
+    const nj  = set.filter(t => !t.isJoker);
+    if (!nj.length) continue;
+    const allSameColor = nj.every(t => t.color === nj[0].color);
+    if (!allSameColor || set.length < 4) continue;   // only split runs of 4+
+
+    // Try each possible split point
+    for (let split = 3; split <= set.length - 3; split++) {
+      const left  = set.slice(0, split);
+      const right = set.slice(split);
+      if (!isValidSet(left) || !isValidSet(right)) continue;
+
+      // With the split in place, try to play from rack into each half
+      const boardWithSplit = [...board.slice(0, si), left, right, ...board.slice(si + 1)];
+      const rackMelds = findMeldsFromTiles(rack);
+      for (const meld of rackMelds) {
+        if (setPoints(meld) === 0) continue;
+        const usedIds  = new Set(meld.map(t => t.id));
+        const newBoard = [...boardWithSplit, meld];
+        candidates.push({ newBoard, usedTileIds: usedIds });
+      }
+    }
+  }
+
+  return candidates;
+}
+
+// ── Per-difficulty play selectors ─────────────────────────────────────────────
+
+/**
+ * EASY – pick the very first meld available; no board manipulation.
+ * Intentionally sub-optimal so new players can beat it.
+ */
+function botPlayEasy(rack, board, hasInitialMeld, minInitial) {
+  const melds = findMeldsFromTiles(rack);
+  for (const meld of melds) {
+    const pts = setPoints(meld);
+    if (!hasInitialMeld && pts < minInitial) continue;
+    return { newBoard: [...board, meld], usedTileIds: new Set(meld.map(t => t.id)), pts };
+  }
+  return null;
+}
+
+/**
+ * MEDIUM – greedy: most tiles played, then most points.
+ * Also tries single-tile extensions onto existing board sets.
+ */
+function botPlayMedium(rack, board, hasInitialMeld, minInitial) {
+  // Gather candidates: new melds from rack + board extensions
+  let candidates = [];
+
+  const rackMelds = findMeldsFromTiles(rack);
+  for (const meld of rackMelds) {
+    const pts = setPoints(meld);
+    if (!hasInitialMeld && pts < minInitial) continue;
+    candidates.push({ newBoard: [...board, meld], usedTileIds: new Set(meld.map(t => t.id)), pts });
+  }
+
+  if (hasInitialMeld) {
+    for (const ext of findBoardExtensions(rack, board)) {
+      ext.pts = [...ext.usedTileIds].reduce((s, id) => {
+        const t = rack.find(r => r.id === id);
+        return s + (t ? (t.isJoker ? 30 : t.num) : 0);
+      }, 0);
+      candidates.push(ext);
+    }
+  }
+
+  if (!candidates.length) return null;
+
+  // Sort: most tiles first, then most points
+  candidates.sort((a, b) => b.usedTileIds.size - a.usedTileIds.size || b.pts - a.pts);
+  return candidates[0];
+}
+
+/**
+ * HARD – strategic: minimise the point value left on the rack after playing
+ * (i.e. dump the highest-value tiles first).  Also considers board extensions
+ * and run-splitting.
+ */
+function botPlayHard(rack, board, hasInitialMeld, minInitial) {
+  let candidates = [];
+
+  const rackMelds = findMeldsFromTiles(rack);
+  for (const meld of rackMelds) {
+    const pts = setPoints(meld);
+    if (!hasInitialMeld && pts < minInitial) continue;
+    const usedTileIds = new Set(meld.map(t => t.id));
+    const remainingRackPts = rack.filter(t => !usedTileIds.has(t.id))
+                                 .reduce((s, t) => s + (t.isJoker ? 30 : t.num), 0);
+    candidates.push({ newBoard: [...board, meld], usedTileIds, pts, remainingRackPts });
+  }
+
+  if (hasInitialMeld) {
+    for (const ext of findBoardExtensions(rack, board)) {
+      const remainingRackPts = rack.filter(t => !ext.usedTileIds.has(t.id))
+                                   .reduce((s, t) => s + (t.isJoker ? 30 : t.num), 0);
+      candidates.push({ ...ext, pts: 0, remainingRackPts });
+    }
+    for (const sp of findSplitPlays(rack, board)) {
+      const remainingRackPts = rack.filter(t => !sp.usedTileIds.has(t.id))
+                                   .reduce((s, t) => s + (t.isJoker ? 30 : t.num), 0);
+      candidates.push({ ...sp, pts: 0, remainingRackPts });
+    }
+  }
+
+  if (!candidates.length) return null;
+
+  // Sort: fewest remaining rack points first, then most tiles played as tiebreak
+  candidates.sort((a, b) =>
+    a.remainingRackPts - b.remainingRackPts || b.usedTileIds.size - a.usedTileIds.size
+  );
+  return candidates[0];
+}
+
+/** Dispatch to the right strategy based on bot.difficulty. */
+function botFindBestPlay(bot, board, minInitial) {
+  const diff = bot.difficulty || 'medium';
+  if (diff === 'easy')   return botPlayEasy  (bot.rack, board, bot.hasInitialMeld, minInitial);
+  if (diff === 'hard')   return botPlayHard  (bot.rack, board, bot.hasInitialMeld, minInitial);
+  /* medium */           return botPlayMedium(bot.rack, board, bot.hasInitialMeld, minInitial);
+}
+
+// ── Bot turn execution ────────────────────────────────────────────────────────
+
+/** Execute one bot turn inside a room. */
+function doBotTurn(room) {
+  const bot = room.players[room.currentPlayerIndex];
+  if (!bot?.isBot) return;
+
+  const result = botFindBestPlay(bot, room.board, room.rules.initialMeldMin);
+
+  if (!result) {
+    // Draw a tile
+    if (room.pool.length > 0) {
+      bot.rack.push(room.pool.pop());
+      room.log.push(`${bot.name} drew a tile.`);
+    } else {
+      room.log.push(`${bot.name} passed (pool empty).`);
+    }
+    advanceTurn(room);
+    return;
+  }
+
+  // Play the meld
+  if (!bot.hasInitialMeld) {
+    bot.hasInitialMeld = true;
+    room.log.push(`${bot.name} made their initial meld! (${result.pts} pts)`);
+  }
+  bot.rack = bot.rack.filter(t => !result.usedTileIds.has(t.id));
+  room.board = result.newBoard.map(set => sortSet(set));
+  room.log.push(`${bot.name} played ${result.usedTileIds.size} tile(s).`);
+
+  if (bot.rack.length === 0) {
+    clearTurnTimer(room);   // don't fire after game ends
+    room.phase = 'ended';
+    room.winner = bot.name;
+    room.winnerScores = room.players.map(p => ({
+      name: p.name, avatarColor: p.avatarColor,
+      rackCount: p.rack.length, points: rackPoints(p.rack),
+    }));
+    room.log.push(`🏆 ${bot.name} wins!`);
+    return;
+  }
+
+  advanceTurn(room);
+}
+
+/** After advanceTurn, schedule the bot to play after a difficulty-appropriate delay. */
+function maybeTriggerBot(room) {
+  const current = room.players[room.currentPlayerIndex];
+  if (!current?.isBot || room.phase !== 'playing') return;
+  const delay = BOT_THINK_MS[current.difficulty] ?? BOT_THINK_MS.medium;
+  setTimeout(() => {
+    if (room.phase !== 'playing') return;
+    if (!room.players[room.currentPlayerIndex]?.isBot) return;
+    doBotTurn(room);
+    broadcastState(room);
+    // Chain: in case the next player is also a bot
+    maybeTriggerBot(room);
+  }, delay);
+}
+
 // ─── Tiles ────────────────────────────────────────────────────────────────────
 function createTileSet() {
   const tiles = []; let id = 0;
@@ -111,6 +434,39 @@ function setPoints(tiles) {
        + tiles.filter(t => t.isJoker).length * 30;
 }
 
+/** Sort tiles within a set for consistent display: runs by number, groups by color. */
+function sortSet(tiles) {
+  const nj     = tiles.filter(t => !t.isJoker);
+  const jokers = tiles.filter(t =>  t.isJoker);
+  if (!nj.length) return tiles;
+  const colorOrder = ['red','blue','orange','black'];
+  const allSameColor = nj.every(t => t.color === nj[0].color);
+  if (allSameColor) {
+    // Run: sort by number, then slot jokers into gaps
+    const sorted = nj.slice().sort((a, b) => a.num - b.num);
+    const result = [...sorted];
+    let jLeft = jokers.length;
+    for (let i = result.length - 1; i > 0 && jLeft > 0; i--) {
+      const gap = result[i].num - result[i - 1].num - 1;
+      for (let g = 0; g < gap && jLeft > 0; g++) {
+        result.splice(i, 0, jokers[jokers.length - jLeft]);
+        jLeft--;
+        i++;
+      }
+    }
+    while (jLeft > 0) {
+      const last = result.filter(t => !t.isJoker).at(-1);
+      if (last && last.num < 13) result.push(jokers[jokers.length - jLeft]);
+      else result.unshift(jokers[jokers.length - jLeft]);
+      jLeft--;
+    }
+    return result;
+  } else {
+    // Group: sort by color order, jokers at end
+    return [...nj.sort((a, b) => colorOrder.indexOf(a.color) - colorOrder.indexOf(b.color)), ...jokers];
+  }
+}
+
 function rackPoints(rack) {
   return rack.reduce((s,t) => s + (t.isJoker ? 30 : t.num), 0);
 }
@@ -157,6 +513,12 @@ function startGame(room) {
     p.rack = []; p.hasInitialMeld = false;
     for (let i = 0; i < TILES_PER_PLAYER; i++) p.rack.push(room.pool.pop());
   }
+  // Bug 4 fix: set up the first player's snapshot, timestamp and timer
+  // inside startGame so nothing is skipped regardless of call site.
+  const first = room.players[0];
+  room.turnSnapshot = { board: [], rack: JSON.parse(JSON.stringify(first.rack)) };
+  room.turnStartedAt = Date.now();
+  armTurnTimer(room);
 }
 
 function drawTile(room, playerId) {
@@ -164,8 +526,15 @@ function drawTile(room, playerId) {
   if (!player) return { error: 'Player not found' };
   if (room.players[room.currentPlayerIndex].id !== playerId) return { error: 'Not your turn' };
   if (room.pool.length === 0) return { error: 'Pool is empty' };
+  // Bug 5 fix: take the snapshot BEFORE modifying the rack so that undoTurn
+  // (which restores from turnSnapshot) can correctly remove the drawn tile.
+  room.turnSnapshot = {
+    board: JSON.parse(JSON.stringify(room.board)),
+    rack:  JSON.parse(JSON.stringify(player.rack)),
+  };
   player.rack.push(room.pool.pop());
   room.log.push(`${player.name} drew a tile.`);
+  clearTurnTimer(room);  // cancel timer before advanceTurn re-arms for next player
   advanceTurn(room);
   return { ok: true };
 }
@@ -206,10 +575,11 @@ function playTurn(room, playerId, newBoard) {
 
   const usedIds = new Set(tilesAdded.map(t => t.id));
   player.rack = player.rack.filter(t => !usedIds.has(t.id));
-  room.board = newBoard;
+  room.board = newBoard.map(set => sortSet(set));
   room.log.push(`${player.name} played ${tilesAdded.length} tile(s).`);
 
   if (player.rack.length === 0) {
+    clearTurnTimer(room);   // Bug 2/3 fix: don't fire after game ends
     room.phase = 'ended';
     room.winner = player.name;
     room.winnerScores = room.players.map(p => ({
@@ -224,14 +594,55 @@ function playTurn(room, playerId, newBoard) {
   return { ok: true };
 }
 
+/** Cancel any running turn-expiry timer for this room. */
+function clearTurnTimer(room) {
+  if (room._turnTimer) {
+    clearTimeout(room._turnTimer);
+    room._turnTimer = null;
+  }
+}
+
+/**
+ * Arm the server-side turn-expiry timer.
+ * When the timer fires the current player auto-draws (or passes if the pool
+ * is empty) and the turn advances — identical to what drawTile() does.
+ * Bots manage their own timing via maybeTriggerBot, so we skip them here.
+ */
+function armTurnTimer(room) {
+  clearTurnTimer(room);
+  if (!room.rules.turnTimer || room.rules.turnTimer <= 0) return;
+  const playerAtArmTime = room.players[room.currentPlayerIndex];
+  if (!playerAtArmTime || playerAtArmTime.isBot) return;
+
+  room._turnTimer = setTimeout(() => {
+    // Guard: room state may have changed while we were waiting
+    if (room.phase !== 'playing') return;
+    const current = room.players[room.currentPlayerIndex];
+    if (!current || current.id !== playerAtArmTime.id) return;
+
+    if (room.pool.length > 0) {
+      current.rack.push(room.pool.pop());
+      room.log.push(`⏱️ ${current.name}'s time ran out — drew a tile.`);
+    } else {
+      room.log.push(`⏱️ ${current.name}'s time ran out — pool empty, passing.`);
+    }
+    advanceTurn(room);
+    broadcastState(room);
+  }, room.rules.turnTimer * 1000);
+}
+
 function advanceTurn(room) {
+  clearTurnTimer(room);   // cancel the outgoing player's timer
   room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
   const next = room.players[room.currentPlayerIndex];
   room.turnSnapshot = {
     board: JSON.parse(JSON.stringify(room.board)),
     rack:  JSON.parse(JSON.stringify(next.rack)),
   };
+  room.turnStartedAt = Date.now();   // Bug 1 fix: stamp when the turn begins
   room.log.push(`It's ${next.name}'s turn.`);
+  armTurnTimer(room);    // Bug 2 fix: enforce the timer server-side
+  maybeTriggerBot(room);
 }
 
 function undoTurn(room, playerId) {
@@ -260,6 +671,7 @@ function removePlayer(room, idx) {
     room.players.splice(idx, 1);
 
     if (room.players.length < 2) {
+      clearTurnTimer(room);   // Bug 3 fix: don't fire after game ends
       room.phase = 'ended';
       room.winner = room.players[0]?.name || 'Nobody';
       room.winnerScores = room.players.map(p => ({
@@ -269,15 +681,14 @@ function removePlayer(room, idx) {
       room.log.push('Not enough players. Game over!');
     } else {
       if (wasTheirTurn) {
-        // Wrap index to stay in bounds — this player is now gone so the
-        // player at this index IS the next player already; just set snapshot.
-        room.currentPlayerIndex = room.currentPlayerIndex % room.players.length;
-        const next = room.players[room.currentPlayerIndex];
-        room.turnSnapshot = {
-          board: JSON.parse(JSON.stringify(room.board)),
-          rack:  JSON.parse(JSON.stringify(next.rack)),
-        };
-        room.log.push(`It's ${next.name}'s turn.`);
+        // Bug 3 fix: use advanceTurn so the timer stamp and server-side
+        // enforcement are set correctly for the newly-active player.
+        // currentPlayerIndex already points at the next player after splice,
+        // so we step back by one and let advanceTurn increment it normally.
+        room.currentPlayerIndex = (room.currentPlayerIndex === 0
+          ? room.players.length
+          : room.currentPlayerIndex) - 1;
+        advanceTurn(room);
       } else if (idx < room.currentPlayerIndex) {
         // Removed player was before the current player — shift index back
         room.currentPlayerIndex--;
@@ -294,12 +705,15 @@ function safeState(room, forPlayerId) {
     id: room.id, phase: room.phase,
     board: room.board, pool: room.pool.length,
     currentPlayerIndex: room.currentPlayerIndex,
+    turnStartedAt: room.turnStartedAt || null,   // Bug 1 fix: clients use this to reset their countdown
     winner: room.winner, winnerScores: room.winnerScores,
     log: room.log.slice(-30), rules: room.rules, palette: room.palette,
     players: room.players.map(p => ({
       id: p.id, name: p.name,
       avatarColor: p.avatarColor || AVATAR_COLORS[0],
       rackCount: p.rack.length, hasInitialMeld: p.hasInitialMeld,
+      isBot: p.isBot || false,
+      difficulty: p.difficulty || null,
       rack: p.id === forPlayerId ? p.rack : undefined,
     })),
   };
@@ -355,11 +769,15 @@ io.on('connection', (socket) => {
     const room = rooms[currentRoom];
     if (!room) return cb?.({ error: 'Room not found' });
     if (room.players[0].id !== socket.id) return cb?.({ error: 'Only the host can start' });
-    if (room.players.length < MIN_PLAYERS) return cb?.({ error: `Need at least ${MIN_PLAYERS} players` });
+    const humanCount = room.players.filter(p => !p.isBot).length;
+    const botCount   = room.players.filter(p =>  p.isBot).length;
+    if (room.players.length < MIN_PLAYERS) return cb?.({ error: `Need at least ${MIN_PLAYERS} players (add a CPU player or invite a friend)` });
+    if (humanCount < 1) return cb?.({ error: 'Need at least 1 human player' });
     startGame(room);
-    room.turnSnapshot = { board: [], rack: JSON.parse(JSON.stringify(room.players[0].rack)) };
+    // Bug 4 fix: snapshot/timestamp/timer are now set inside startGame()
     cb?.({ ok: true });
     broadcastState(room);
+    maybeTriggerBot(room);
   });
 
   socket.on('rematch', (_, cb) => {
@@ -472,6 +890,40 @@ io.on('connection', (socket) => {
     } else {
       cb?.({ error: 'Could not rejoin — game in progress and name not recognised' });
     }
+  });
+
+  socket.on('add_bot', ({ difficulty } = {}, cb) => {
+    const room = rooms[currentRoom];
+    if (!room) return cb?.({ error: 'Room not found' });
+    if (room.players[0]?.id !== socket.id) return cb?.({ error: 'Only host can add bots' });
+    if (room.phase !== 'lobby') return cb?.({ error: 'Cannot add bots after game starts' });
+    if (room.players.length >= MAX_PLAYERS) return cb?.({ error: `Room full (max ${MAX_PLAYERS})` });
+    const diff     = Object.values(BOT_DIFFICULTY).includes(difficulty) ? difficulty : 'medium';
+    const botIndex = room.players.filter(p => p.isBot).length;
+    const bot = {
+      id: makeBotId(),
+      name: BOT_NAMES_BY_DIFF[diff][botIndex % BOT_NAMES_BY_DIFF[diff].length],
+      avatarColor: BOT_COLORS[botIndex % BOT_COLORS.length],
+      rack: [], hasInitialMeld: false, isBot: true, difficulty: diff,
+    };
+    room.players.push(bot);
+    room.log.push(`${bot.name} joined as a ${diff} CPU player.`);
+    cb?.({ ok: true });
+    broadcastState(room);
+  });
+
+  socket.on('remove_bot', (_, cb) => {
+    const room = rooms[currentRoom];
+    if (!room) return cb?.({ error: 'Room not found' });
+    if (room.players[0]?.id !== socket.id) return cb?.({ error: 'Only host can remove bots' });
+    if (room.phase !== 'lobby') return cb?.({ error: 'Cannot remove bots after game starts' });
+    const botIdx = room.players.map((p, i) => p.isBot ? i : -1).filter(i => i !== -1).pop();
+    if (botIdx === undefined) return cb?.({ error: 'No bots to remove' });
+    const name = room.players[botIdx].name;
+    room.players.splice(botIdx, 1);
+    room.log.push(`🤖 ${name} removed.`);
+    cb?.({ ok: true });
+    broadcastState(room);
   });
 
   socket.on('disconnect', () => {
