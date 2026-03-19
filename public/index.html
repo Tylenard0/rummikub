@@ -198,7 +198,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
 .b-sort{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.07)}
 
 /* Chat */
-.chat-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;display:flex;align-items:flex-end;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.chat-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:210;display:flex;align-items:flex-end;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .chat-panel{width:100%;max-width:500px;margin:0 auto;background:rgba(20,14,6,.97);border:1px solid rgba(200,153,58,.2);border-radius:20px 20px 0 0;padding:1rem;padding-bottom:max(1rem,var(--safe-bottom));display:flex;flex-direction:column;gap:.75rem}
 .chat-log{max-height:200px;overflow-y:auto;font-size:.8rem;color:var(--text);display:flex;flex-direction:column;gap:.22rem}
 .chat-row-input{display:flex;gap:.5rem}
@@ -553,7 +553,10 @@ body.felt-water .board-area { position:relative;z-index:1; }
 <div class="chat-overlay" id="chat-overlay" style="display:none" onclick="closeChatOutside(event)">
   <div class="chat-panel">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-family:'Cinzel Decorative',serif;font-size:.75rem;color:var(--gold)">CHAT</span>
+      <div>
+        <span style="font-family:'Cinzel Decorative',serif;font-size:.75rem;color:var(--gold)" id="chat-title">CHAT</span>
+        <div id="chat-subtitle" style="display:none;font-size:.7rem;color:var(--muted);margin-top:.15rem">Say goodbye or ask for a rematch! 👋</div>
+      </div>
       <button onclick="toggleChat()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">✕</button>
     </div>
     <div class="chat-log" id="chat-log"></div>
@@ -1869,6 +1872,10 @@ function showWin(state) {
   setTimeout(launchConfetti, 300);
   const me = state.players.find(p=>p.id===myId);
   if (state.winner===myName) saveWinner(myName, me?.avatarColor);
+  // Open chat after a short delay so the win animation plays first
+  setTimeout(() => {
+    if (!chatIsOpen) toggleChat();
+  }, 1200);
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -1887,6 +1894,9 @@ function toggleChat() {
     setTimeout(() => el('chat-inp').focus(), 100);
     lastSeenChatCount = (window._humanChatCount || 0);
     el('chat-btn').classList.remove('has-unread');
+    // Show the game-over prompt in the chat header when the game has ended
+    const isGameOver = gState?.phase === 'ended';
+    el('chat-subtitle').style.display = isGameOver ? 'block' : 'none';
   }
 }
 function closeChatOutside(e) { if(e.target===el('chat-overlay')) toggleChat(); }
