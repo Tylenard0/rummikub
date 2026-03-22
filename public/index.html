@@ -386,6 +386,18 @@ body.felt-water .board-area { position:relative;z-index:1; }
   border-radius:6px;color:#f07070;cursor:pointer;
 }
 
+/* Share Game button */
+.btn-share {
+  background:rgba(20,189,235,.12);
+  border:1px solid rgba(20,189,235,.35);
+  color:#14BDEB;
+  font-size:.88rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  transition:all .18s;
+}
+.btn-share:active { transform:scale(.97); background:rgba(20,189,235,.22); }
+
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(200,153,58,.22);border-radius:2px}
@@ -485,6 +497,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
     <div class="room-code" id="disp-code">—</div>
     <div class="room-hint">Share with players on the same network or internet</div>
   </div>
+  <button class="btn btn-share" id="share-btn" onclick="shareGame()" style="max-width:320px;width:100%">📲 Share Game via SMS</button>
   <ul class="player-list" id="wait-list"></ul>
   <div class="rules-panel" id="rules-panel" style="display:none">
     <div class="rules-header" onclick="toggleRules()">
@@ -654,7 +667,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
 
 <!-- Footer -->
 <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:.3rem 1rem max(.3rem,env(safe-area-inset-bottom));font-size:.62rem;color:rgba(200,153,58,.35);letter-spacing:.12em;pointer-events:none;z-index:0;font-family:'DM Sans',sans-serif">
-  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v7.00
+  Made with ❤️ by FatFishLabs &nbsp;·&nbsp; v7.01
 </div>
 
 <script>
@@ -670,6 +683,15 @@ function vv(id) {
 function clone(x)        { return JSON.parse(JSON.stringify(x)); }
 function errMsg(id, msg) { el(id).textContent = msg; setTimeout(() => el(id).textContent = '', 4000); }
 function show(viewId)    { qsa('.view').forEach(v => v.classList.remove('active')); el(viewId).classList.add('active'); }
+
+// ─── Share Game via SMS ───────────────────────────────────────────────────────
+function shareGame() {
+  const code = (el('disp-code').textContent || '').trim();
+  if (!code || code === '—') { toast('No room code yet', 'err'); return; }
+  const joinUrl = location.origin + location.pathname + '?join=' + code;
+  const body = encodeURIComponent('Join my Parsons Rummikub game! Room code: ' + code + '\n' + joinUrl);
+  window.open('sms:?body=' + body, '_self');
+}
 
 let toastTimer;
 function toast(msg, type='') {
