@@ -689,12 +689,12 @@ function shareGame() {
   const code = (el('disp-code').textContent || '').trim();
   if (!code || code === '—') { toast('No room code yet', 'err'); return; }
   const joinUrl = location.origin + location.pathname + '?join=' + code;
-  const msg = 'Join my Parsons Rummikub game! Room code: ' + code + '\n' + joinUrl;
+  const msg = 'Join my Parsons Rummikub game! Room code: ' + code;
 
   // iOS Safari blocks window.open() for sms: links — use Web Share API if
   // available (iOS 12.2+), else fall back to a direct href navigation.
   if (navigator.share) {
-    navigator.share({ title: 'Join my Rummikub game', text: msg })
+    navigator.share({ title: 'Join my Rummikub game', text: msg, url: joinUrl })
       .catch(() => {}); // user cancelled — silently ignore
   } else {
     // Android, desktop, or older iOS: direct location change works reliably
