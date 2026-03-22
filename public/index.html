@@ -2086,7 +2086,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setFelt('felt-dark');
   renderLeaderboard();
   buildReactionBar();
-  el('inp-name').addEventListener('keydown', e => { if(e.key==='Enter') createRoom(); });
+  el('inp-name').addEventListener('keydown', e => { if(e.key==='Enter') { if(el('create-btn').disabled) joinRoom(); else createRoom(); } });
   el('inp-code').addEventListener('keydown', e => { if(e.key==='Enter') joinRoom(); });
   el('inp-code').addEventListener('input',   e => { e.target.value=e.target.value.toUpperCase(); });
 
