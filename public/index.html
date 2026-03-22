@@ -472,7 +472,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
     <div class="card-title">Set Up Your Player</div>
     <div class="field"><label>Your Name</label><input type="text" id="inp-name" placeholder="e.g. Lois" maxlength="16" autocomplete="off" autocorrect="off" spellcheck="false"></div>
     <div class="field"><label>Pick Your Color</label><div class="avatar-row" id="avatar-row"></div></div>
-    <button class="btn btn-gold" onclick="createRoom()">✦ Create New Room</button>
+    <button class="btn btn-gold" id="create-btn" onclick="createRoom()">✦ Create New Room</button>
     <div class="divider">or join existing</div>
     <div class="field"><label>Room Code</label><input type="text" id="inp-code" placeholder="5-letter code" maxlength="5" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"></div>
     <button class="btn btn-gold" onclick="joinRoom()">→ Join Room</button>
@@ -497,7 +497,7 @@ body.felt-water .board-area { position:relative;z-index:1; }
     <div class="room-code" id="disp-code">—</div>
     <div class="room-hint">Share with players on the same network or internet</div>
   </div>
-  <button class="btn btn-share" id="share-btn" onclick="shareGame()" style="max-width:320px;width:100%">📲 Invitr a Friend! </button>
+  <button class="btn btn-share" id="share-btn" onclick="shareGame()" style="max-width:320px;width:100%">📲 Invite a Friend! </button>
   <ul class="player-list" id="wait-list"></ul>
   <div class="rules-panel" id="rules-panel" style="display:none">
     <div class="rules-header" onclick="toggleRules()">
@@ -2099,6 +2099,12 @@ document.addEventListener('DOMContentLoaded', () => {
     codeField.focus();
     errMsg('lobby-err', '👋 Room code pre-filled — enter your name and tap Join!');
     history.replaceState(null, '', location.pathname);
+    const createBtn = el('create-btn');
+    createBtn.disabled = true;
+    createBtn.textContent = '✦ Create New Room';
+    createBtn.style.opacity = '.35';
+    createBtn.style.cursor = 'not-allowed';
+    createBtn.title = 'You were invited to join a room';
   }
 });
 </script>
